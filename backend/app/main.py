@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.admin import router as admin_router
 from backend.app.api.analysis import qa_router, router as analysis_router
@@ -7,6 +8,14 @@ from backend.app.api.search import router as search_router
 from backend.app.config import settings
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/healthz", tags=["system"])
