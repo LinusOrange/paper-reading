@@ -15,6 +15,7 @@
         </div>
         <nav>
           <a href="#dashboard">总览</a>
+          <a href="#imports">文献导入</a>
           <a href="#papers">文献列表</a>
           <a href="#search">专题检索</a>
           <a href="#tasks">任务面板</a>
@@ -37,6 +38,49 @@
             <button id="refresh-button">刷新数据</button>
           </div>
           <div class="cards" id="stats-cards"></div>
+        </section>
+
+        <section id="imports" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>DOI / URL 导入</h3>
+            </div>
+            <form id="import-form" class="search-form">
+              <label>
+                导入类型
+                <select name="import_type">
+                  <option value="doi">doi</option>
+                  <option value="url">url</option>
+                </select>
+              </label>
+              <label>
+                内容
+                <input name="value" type="text" value="10.0000/demo-new" />
+              </label>
+              <label>
+                方向标签
+                <select name="direction_hint">
+                  <option value="large-squint">large-squint</option>
+                  <option value="high-speed">high-speed</option>
+                  <option value="airborne-sar">airborne-sar</option>
+                </select>
+              </label>
+              <button type="submit">创建导入任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>BibTeX 导入</h3>
+            </div>
+            <form id="bibtex-form" class="search-form">
+              <label>
+                BibTeX 内容
+                <textarea name="bibtex" rows="7">@article{demo,title={Large Squint SAR Demo}}</textarea>
+              </label>
+              <button type="submit">导入 BibTeX</button>
+            </form>
+            <div id="import-response" class="detail empty-state">这里展示导入返回结果，并可在导入后刷新文献列表。</div>
+          </div>
         </section>
 
         <section id="papers" class="panel split">

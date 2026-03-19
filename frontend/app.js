@@ -6,6 +6,9 @@ const endpoints = {
   search: '/api/search/filter',
   qa: '/api/qa/ask',
   collector: '/api/collectors/run',
+  importDoi: '/api/papers/import/doi',
+  importUrl: '/api/papers/import/url',
+  importBibtex: '/api/papers/import/bibtex',
 };
 
 const state = {
@@ -23,6 +26,7 @@ const promptList = document.getElementById('prompt-list');
 const searchResults = document.getElementById('search-results');
 const qaAnswer = document.getElementById('qa-answer');
 const collectorResponse = document.getElementById('collector-response');
+const importResponse = document.getElementById('import-response');
 
 async function apiFetch(url, options = {}) {
   const response = await fetch(url, {
@@ -207,11 +211,60 @@ async function runCollector(event) {
   `;
 }
 
+async function runImport(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const directionHint = formData.get('direction_hint');
+  const value = formData.get('value');
+  const importType = formData.get('import_type');
+  const endpoint = importType === 'url' ? endpoints.importUrl : endpoints.importDoi;
+  const payload = {
+    direction_hint: [directionHint],
+    auto_analyze: true,
+    [importType]: value,
+  };
+  const result = await apiFetch(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  importResponse.classList.remove('empty-state');
+  importResponse.innerHTML = `
+    <h4>导入已创建</h4>
+    <p><strong>消息：</strong>${result.message}</p>
+    <p><strong>paper_id：</strong>${result.paper_id ?? '-'}</p>
+  `;
+  await loadDashboard();
+}
+
+async function runBibtexImport(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const payload = {
+    bibtex: formData.get('bibtex'),
+    direction_hint: ['airborne-sar'],
+    auto_analyze: true,
+  };
+  const result = await apiFetch(endpoints.importBibtex, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  importResponse.classList.remove('empty-state');
+  importResponse.innerHTML = `
+    <h4>BibTeX 导入已创建</h4>
+    <p><strong>消息：</strong>${result.message}</p>
+    <p><strong>paper_id：</strong>${result.paper_id ?? '-'}</p>
+    <p><strong>长度：</strong>${result.size}</p>
+  `;
+  await loadDashboard();
+}
+
 async function init() {
   document.getElementById('refresh-button').addEventListener('click', loadDashboard);
   document.getElementById('search-form').addEventListener('submit', runSearch);
   document.getElementById('qa-form').addEventListener('submit', runQa);
   document.getElementById('collector-form').addEventListener('submit', runCollector);
+  document.getElementById('import-form').addEventListener('submit', runImport);
+  document.getElementById('bibtex-form').addEventListener('submit', runBibtexImport);
 
   try {
     await loadDashboard();

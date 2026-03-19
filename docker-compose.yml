@@ -21,6 +21,8 @@ services:
     container_name: sar-demo-backend
     depends_on:
       - postgres
+    environment:
+      DATABASE_URL: postgresql+psycopg://sar_demo:sar_demo@postgres:5432/sar_demo
     ports:
       - "8000:8000"
 

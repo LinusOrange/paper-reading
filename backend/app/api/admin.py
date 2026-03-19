@@ -1,22 +1,26 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from backend.app.db import get_db
+from backend.app.models import ProcessingTask
 from backend.app.schemas import CollectorRunRequest, PromptConfig, TaskInfo
 
 router = APIRouter(tags=["admin"])
 
 
 @router.get("/tasks", response_model=list[TaskInfo])
-def list_tasks() -> list[TaskInfo]:
-    from datetime import datetime, timezone
-
+def list_tasks(db: Session = Depends(get_db)) -> list[TaskInfo]:
+    tasks = db.scalars(select(ProcessingTask).order_by(ProcessingTask.created_at.desc()).limit(20)).all()
     return [
         TaskInfo(
-            id="task-demo-1",
-            name="generate_summary",
-            paper_id=1,
-            state="queued",
-            created_at=datetime.now(timezone.utc),
+            id=str(task.id),
+            name=task.task_name,
+            paper_id=task.paper_id,
+            state=task.state,
+            created_at=task.created_at,
         )
+        for task in tasks
     ]
 
 
@@ -42,7 +46,16 @@ def get_prompts() -> list[PromptConfig]:
                 "scenario": "string",
                 "contributions": "string[]",
             },
-        )
+        ),
+        PromptConfig(
+            name="sar_qa_prompt",
+            version="v1",
+            description="Answer SAR topic questions using grounded paper candidates.",
+            output_schema={
+                "answer": "string",
+                "citations": "number[]",
+            },
+        ),
     ]
 
 

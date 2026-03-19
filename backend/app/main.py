@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,9 +7,21 @@ from backend.app.api.admin import router as admin_router
 from backend.app.api.analysis import qa_router, router as analysis_router
 from backend.app.api.papers import router as papers_router
 from backend.app.api.search import router as search_router
+from backend.app.bootstrap import ensure_demo_data
 from backend.app.config import settings
+from backend.app.db import SessionLocal
+from backend.app.models import Base, engine
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        ensure_demo_data(db)
+    yield
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +38,7 @@ def healthcheck() -> dict:
         "status": "ok",
         "topic": settings.primary_topic,
         "openai_enabled": settings.openai_enabled,
+        "database_url": settings.database_url,
     }
 
 

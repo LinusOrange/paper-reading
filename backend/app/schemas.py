@@ -70,6 +70,15 @@ class ImportBibtexRequest(ImportPaperRequest):
     bibtex: str
 
 
+class PaperUpdateRequest(BaseModel):
+    title: str | None = None
+    year: int | None = Field(default=None, ge=1900, le=2100)
+    venue: str | None = None
+    doi: str | None = None
+    source_url: str | None = None
+    status: PaperStatus | None = None
+
+
 class PaperFilterRequest(BaseModel):
     query: str | None = None
     years: list[int] = Field(default_factory=list)
@@ -83,13 +92,6 @@ class SemanticSearchRequest(BaseModel):
     query: str
     top_k: int = Field(default=10, ge=1, le=50)
     direction_hint: list[DirectionTag] = Field(default_factory=list)
-
-
-class AnalysisMode(str, Enum):
-    summary = "summary"
-    extract = "extract"
-    tags = "tags"
-    qa = "qa"
 
 
 class QARequest(BaseModel):
