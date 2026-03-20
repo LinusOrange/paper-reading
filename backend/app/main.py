@@ -36,14 +36,18 @@ app.add_middleware(
 
 @app.get("/healthz", tags=["system"])
 def healthcheck() -> dict:
+    openai_configured = bool(settings.openai_api_key)
+    analysis_available = settings.openai_enabled and openai_configured
     return {
         "status": "ok",
         "topic": settings.primary_topic,
         "openai_enabled": settings.openai_enabled,
-        "openai_configured": bool(settings.openai_api_key),
+        "openai_configured": openai_configured,
+        "analysis_available": analysis_available,
         "openai_base_url": settings.openai_base_url,
         "openai_model": settings.openai_model,
         "upload_dir": settings.upload_dir,
+        "status_message": "OpenAI 分析已启用。" if analysis_available else "当前还没有配置 OPENAI_API_KEY。论文导入、浏览和检索仍可正常使用，但分析与问答功能会保持不可用。",
     }
 
 

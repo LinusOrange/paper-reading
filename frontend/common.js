@@ -23,13 +23,30 @@ export async function apiFetch(url, options = {}) {
   return response.json();
 }
 
+function renderHealthSummary(health) {
+  const serviceStatus = health.status === 'ok' ? '后端正常' : health.status;
+  const openaiStatus = health.analysis_available
+    ? 'OpenAI 分析已启用'
+    : (health.status_message || '未配置 OpenAI Key（导入/浏览可用，分析/问答暂不可用）');
+
+  return `
+    <div class="status-line">
+      <span class="status-chip ${health.analysis_available ? 'healthy' : 'warning'}">${serviceStatus}</span>
+      <span>${health.topic}</span>
+      <span>${health.openai_model}</span>
+    </div>
+    <div class="status-note">${openaiStatus}</div>
+  `;
+}
+
 export async function loadHealthStatus(element, retries = 8, delayMs = 2500) {
   let lastError = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
     try {
       const health = await apiFetch(endpoints.health);
-      element.textContent = `${health.status} · ${health.topic} · ${health.openai_model} · ${health.openai_configured ? 'OpenAI configured' : 'OpenAI missing key'}`;
-      element.classList.add('healthy');
+      element.innerHTML = renderHealthSummary(health);
+      element.classList.toggle('healthy', health.analysis_available);
+      element.classList.toggle('warning', !health.analysis_available);
       return health;
     } catch (error) {
       lastError = error;

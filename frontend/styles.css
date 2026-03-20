@@ -9,7 +9,9 @@
   --accent-soft: rgba(121, 168, 255, 0.16);
   --border: rgba(255, 255, 255, 0.08);
   --success: #3ad29f;
+  --warning: #ffcc66;
 }
+
 
 * { box-sizing: border-box; }
 html, body { width: 100%; overflow-x: hidden; }
@@ -67,14 +69,41 @@ nav a:hover, nav a.active-link { background: var(--accent-soft); }
 .status-pill {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 10px 14px;
+  border-radius: 20px;
+  padding: 12px 14px;
   white-space: normal;
   max-width: 420px;
   line-height: 1.4;
   font-size: 13px;
 }
-.status-pill.healthy { color: var(--success); }
+.status-pill.healthy { border-color: rgba(58, 210, 159, 0.35); }
+.status-pill.warning { border-color: rgba(255, 204, 102, 0.35); }
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+}
+.status-chip.healthy {
+  background: rgba(58, 210, 159, 0.15);
+  color: var(--success);
+}
+.status-chip.warning {
+  background: rgba(255, 204, 102, 0.15);
+  color: var(--warning);
+}
+.status-note {
+  margin-top: 8px;
+  color: var(--muted);
+}
 
 .panel {
   background: rgba(19, 26, 45, 0.88);
