@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAR Literature Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>SAR Demo</h1>
+          <p>机载高分辨率 SAR 成像文献系统</p>
+        </div>
+        <nav>
+          <a href="#dashboard">总览</a>
+          <a href="#imports">文献导入</a>
+          <a href="#papers">文献列表</a>
+          <a href="#analysis">分析任务</a>
+          <a href="#search">专题检索</a>
+          <a href="#tasks">任务面板</a>
+          <a href="#prompts">Prompt 配置</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="page-header">
+          <div>
+            <h2>服务器 Demo 面板</h2>
+            <p>面向高速场景与大斜视角场景的机载高分辨率 SAR 文献整理。</p>
+          </div>
+          <div class="status-pill" id="health-status">正在检查服务…</div>
+        </header>
+
+        <section id="dashboard" class="panel">
+          <div class="panel-header">
+            <h3>系统总览</h3>
+            <button id="refresh-button">刷新数据</button>
+          </div>
+          <div class="cards" id="stats-cards"></div>
+        </section>
+
+        <section id="imports" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>DOI / URL 导入</h3>
+            </div>
+            <form id="import-form" class="search-form">
+              <label>
+                导入类型
+                <select name="import_type">
+                  <option value="doi">doi</option>
+                  <option value="url">url</option>
+                </select>
+              </label>
+              <label>
+                内容
+                <input name="value" type="text" value="10.0000/demo-new" />
+              </label>
+              <label>
+                方向标签
+                <select name="direction_hint">
+                  <option value="large-squint">large-squint</option>
+                  <option value="high-speed">high-speed</option>
+                  <option value="airborne-sar">airborne-sar</option>
+                </select>
+              </label>
+              <button type="submit">创建导入任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>BibTeX 导入</h3>
+            </div>
+            <form id="bibtex-form" class="search-form">
+              <label>
+                BibTeX 内容
+                <textarea name="bibtex" rows="7">@article{demo,title={Large Squint SAR Demo}}</textarea>
+              </label>
+              <button type="submit">导入 BibTeX</button>
+            </form>
+            <div id="import-response" class="detail empty-state">这里展示导入返回结果，并可在导入后刷新文献列表。</div>
+          </div>
+        </section>
+
+        <section id="pdf-upload" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>PDF 上传</h3>
+            </div>
+            <form id="pdf-form" class="search-form">
+              <label>
+                论文标题
+                <input name="title" type="text" value="Uploaded SAR PDF Demo" />
+              </label>
+              <label>
+                年份
+                <input name="year" type="number" value="2026" />
+              </label>
+              <label>
+                来源
+                <input name="venue" type="text" value="Internal Upload" />
+              </label>
+              <label>
+                方向标签
+                <input name="direction_hint" type="text" value="airborne-sar,large-squint" />
+              </label>
+              <label>
+                PDF 文件
+                <input name="file" type="file" accept="application/pdf" />
+              </label>
+              <button type="submit">上传 PDF</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>PDF 上传结果</h3>
+            </div>
+            <div id="pdf-response" class="detail empty-state">上传 PDF 后，这里会展示 paper_id 与存储路径。</div>
+          </div>
+        </section>
+
+        <section id="papers" class="panel split">
+          <div>
+            <div class="panel-header">
+              <h3>文献列表</h3>
+            </div>
+            <div id="paper-list" class="list"></div>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>文献详情</h3>
+            </div>
+            <div id="paper-detail" class="detail empty-state">请选择左侧论文查看结构化摘要。</div>
+          </div>
+        </section>
+
+        <section id="analysis" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>OpenAI 分析任务入口</h3>
+            </div>
+            <form id="analysis-form" class="search-form">
+              <label>
+                paper_id
+                <input id="analysis-paper-id" name="paper_id" type="number" value="1" />
+              </label>
+              <label>
+                任务列表（逗号分隔）
+                <input name="task_types" type="text" value="generate_summary,extract_entities,recommend_tags" />
+              </label>
+              <button type="submit">创建 OpenAI 分析任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>分析任务返回</h3>
+            </div>
+            <div id="analysis-response" class="detail empty-state">这里展示 OpenAI 分析任务排队结果。</div>
+          </div>
+        </section>
+
+        <section id="search" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>专题检索</h3>
+            </div>
+            <form id="search-form" class="search-form">
+              <label>
+                关键词
+                <input name="query" type="text" value="large squint airborne SAR imaging" />
+              </label>
+              <label>
+                方法
+                <input name="method" type="text" value="motion-compensation" />
+              </label>
+              <label>
+                场景标签
+                <select name="tag">
+                  <option value="large-squint">large-squint</option>
+                  <option value="high-speed">high-speed</option>
+                  <option value="airborne-sar">airborne-sar</option>
+                </select>
+              </label>
+              <button type="submit">执行检索</button>
+            </form>
+            <div id="search-results" class="list compact"></div>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>问答示例</h3>
+            </div>
+            <form id="qa-form" class="search-form">
+              <label>
+                问题
+                <textarea name="question" rows="4">大斜视场景下哪些方法适合高分辨成像？</textarea>
+              </label>
+              <button type="submit">发送问答</button>
+            </form>
+            <div id="qa-answer" class="detail empty-state">提交问题后，这里会显示 OpenAI 驱动的答案占位结果。</div>
+          </div>
+        </section>
+
+        <section id="tasks" class="panel split">
+          <div>
+            <div class="panel-header">
+              <h3>任务队列</h3>
+            </div>
+            <div id="task-list" class="list compact"></div>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>采集器启动</h3>
+            </div>
+            <form id="collector-form" class="search-form">
+              <label>
+                查询分组
+                <select name="query_group">
+                  <option value="base">base</option>
+                  <option value="high_speed">high_speed</option>
+                  <option value="large_squint">large_squint</option>
+                </select>
+              </label>
+              <label>
+                数量限制
+                <input name="limit" type="number" min="1" max="200" value="20" />
+              </label>
+              <button type="submit">启动采集器</button>
+            </form>
+            <div id="collector-response" class="detail empty-state">这里展示采集器执行结果。</div>
+          </div>
+        </section>
+
+        <section id="prompts" class="panel">
+          <div class="panel-header">
+            <h3>Prompt 配置</h3>
+          </div>
+          <div id="prompt-list" class="list compact"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
