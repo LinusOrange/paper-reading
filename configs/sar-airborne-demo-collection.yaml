@@ -1,0 +1,83 @@
+demo:
+  name: airborne-high-resolution-sar
+  primary_topic: airborne high-resolution SAR imaging
+  subtopics:
+    - high-speed-scene
+    - large-squint-scene
+  model_strategy:
+    provider: openai
+    use_openai_for:
+      - summary
+      - entity_extraction
+      - topic_tagging
+      - embeddings
+      - qa
+
+collectors:
+  enabled:
+    - arxiv
+    - crossref
+    - openalex
+    - semantic_scholar
+    - manual_import
+
+queries:
+  base:
+    - "airborne SAR high resolution imaging"
+    - "airborne synthetic aperture radar imaging"
+    - "high resolution SAR imaging"
+    - "airborne radar imaging motion compensation"
+  high_speed:
+    - "high speed airborne SAR imaging"
+    - "high speed platform SAR imaging"
+    - "motion compensation airborne SAR"
+    - "high dynamic SAR imaging"
+    - "range cell migration airborne SAR"
+    - "high-speed SAR autofocus"
+  large_squint:
+    - "high squint SAR imaging"
+    - "large squint angle SAR imaging"
+    - "high squint airborne SAR"
+    - "squinted SAR motion compensation"
+    - "high-resolution high-squint SAR"
+    - "azimuth-variant SAR imaging"
+
+review_labels:
+  topic:
+    - airborne-sar
+    - high-resolution
+    - high-speed
+    - large-squint
+  methods:
+    - motion-compensation
+    - autofocus
+    - rcmc
+    - chirp-scaling
+    - omega-k
+    - backprojection
+  issues:
+    - range-migration
+    - azimuth-variant
+    - phase-error
+    - geometry-distortion
+  evidence:
+    - simulation
+    - measured-data
+    - real-flight-data
+
+workflow:
+  ingest_steps:
+    - create_candidate
+    - deduplicate
+    - fetch_metadata
+    - attach_or_upload_pdf
+    - extract_text
+    - openai_summary
+    - openai_entity_extraction
+    - build_embeddings
+    - review_queue
+  weekly_schedule:
+    - run_base_queries
+    - run_high_speed_queries
+    - run_large_squint_queries
+    - export_review_queue
