@@ -1,0 +1,16 @@
+[project]
+name = "paper-reading"
+version = "0.1.0"
+description = "Airborne high-resolution SAR literature demo backend scaffold"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.111.0",
+  "uvicorn>=0.30.0",
+  "pydantic>=2.7.0",
+  "sqlalchemy>=2.0.30",
+  "psycopg[binary]>=3.1.19",
+  "python-multipart>=0.0.9",
+]
+
+[tool.uv]
+dev-dependencies = []
