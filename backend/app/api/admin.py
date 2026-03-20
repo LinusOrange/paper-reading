@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.app.db import get_db
 from backend.app.models import ProcessingTask
@@ -11,14 +11,22 @@ router = APIRouter(tags=["admin"])
 
 @router.get("/tasks", response_model=list[TaskInfo])
 def list_tasks(db: Session = Depends(get_db)) -> list[TaskInfo]:
-    tasks = db.scalars(select(ProcessingTask).order_by(ProcessingTask.created_at.desc()).limit(20)).all()
+    tasks = db.scalars(
+        select(ProcessingTask)
+        .options(selectinload(ProcessingTask.paper))
+        .order_by(ProcessingTask.updated_at.desc(), ProcessingTask.created_at.desc())
+        .limit(50)
+    ).all()
     return [
         TaskInfo(
             id=str(task.id),
             name=task.task_name,
             paper_id=task.paper_id,
+            paper_title=task.paper.title if task.paper else None,
             state=task.state,
+            provider=task.provider,
             created_at=task.created_at,
+            updated_at=task.updated_at,
         )
         for task in tasks
     ]

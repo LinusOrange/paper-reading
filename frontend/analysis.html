@@ -19,9 +19,17 @@
       </aside>
       <main class="content">
         <header class="page-header">
-          <div><h2>分析与问答</h2><p>创建 OpenAI 分析任务，查看任务队列，并进行问答。</p></div>
+          <div>
+            <div class="eyebrow">Analysis</div>
+            <h2>任务队列与问答</h2>
+            <p>一眼看清当前活跃任务、排队状态和最近问答结果。</p>
+          </div>
           <div class="status-pill" id="health-status">正在检查服务…</div>
         </header>
+        <section class="panel hero-grid">
+          <div id="active-task"></div>
+          <div id="task-summary" class="mini-stat-grid"></div>
+        </section>
         <section class="panel split-search">
           <div>
             <div class="panel-header"><h3>OpenAI 分析任务入口</h3></div>
@@ -32,8 +40,8 @@
             </form>
           </div>
           <div>
-            <div class="panel-header"><h3>分析任务返回</h3></div>
-            <div id="analysis-response" class="detail empty-state">这里展示 OpenAI 分析任务排队结果。</div>
+            <div class="panel-header"><h3>任务创建结果</h3></div>
+            <div id="analysis-response" class="detail empty-state">这里展示刚刚加入队列的任务信息。</div>
           </div>
         </section>
         <section class="panel split-search">
@@ -46,7 +54,7 @@
             <div id="qa-answer" class="detail empty-state">这里展示问答结果。</div>
           </div>
           <div>
-            <div class="panel-header"><h3>任务队列</h3></div>
+            <div class="panel-header"><h3>最近任务</h3><span class="muted-text">每 10 秒自动刷新</span></div>
             <div id="task-list" class="list compact"></div>
           </div>
         </section>

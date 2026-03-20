@@ -1,18 +1,76 @@
-import { apiFetch, endpoints, loadHealthStatus, renderSidebar } from './common.js';
+import { apiFetch, endpoints, formatDateTime, loadHealthStatus, renderSidebar, renderTaskState } from './common.js';
 
 const healthStatus = document.getElementById('health-status');
 const taskList = document.getElementById('task-list');
 const analysisResponse = document.getElementById('analysis-response');
 const qaAnswer = document.getElementById('qa-answer');
+const taskSummary = document.getElementById('task-summary');
+const activeTask = document.getElementById('active-task');
+
+function summarizeTasks(tasks) {
+  const summary = { total: tasks.length, queued: 0, running: 0, completed: 0, failed: 0 };
+  tasks.forEach((task) => {
+    const state = String(task.state || '').toLowerCase();
+    if (state === 'running' || state === 'processing') summary.running += 1;
+    else if (state === 'completed' || state === 'succeeded') summary.completed += 1;
+    else if (state === 'failed') summary.failed += 1;
+    else summary.queued += 1;
+  });
+  return summary;
+}
+
+function renderTaskSummary(tasks) {
+  const summary = summarizeTasks(tasks);
+  taskSummary.innerHTML = [
+    { label: '总任务', value: summary.total },
+    { label: '处理中', value: summary.running },
+    { label: '已排队', value: summary.queued },
+    { label: '已完成/失败', value: summary.completed + summary.failed },
+  ].map((card) => `<div class="mini-stat"><span>${card.label}</span><strong>${card.value}</strong></div>`).join('');
+}
+
+function renderActiveTask(tasks) {
+  const runningTask = tasks.find((task) => ['running', 'processing'].includes(String(task.state).toLowerCase()));
+  const latestQueued = tasks.find((task) => String(task.state).toLowerCase() === 'queued');
+  const target = runningTask || latestQueued;
+
+  if (!target) {
+    activeTask.innerHTML = '<div class="empty-state">当前没有任务。创建分析任务后，这里会展示最新的执行状态。</div>';
+    return;
+  }
+
+  const stateLabel = runningTask ? '当前正在处理' : '当前没有真正运行中的 worker；最近排队任务如下';
+  activeTask.innerHTML = `
+    <div class="hero-card soft-accent">
+      <div class="eyebrow">${stateLabel}</div>
+      <h3>${target.name}</h3>
+      <p class="muted-text">${target.paper_title || `paper_id=${target.paper_id ?? '-'}`}</p>
+      <div class="inline-meta">
+        ${renderTaskState(target.state)}
+        <span>${target.provider || 'openai'}</span>
+        <span>${formatDateTime(target.updated_at || target.created_at)}</span>
+      </div>
+    </div>
+  `;
+}
 
 function renderTasks(tasks) {
   taskList.innerHTML = tasks
     .map(
       (task) => `
-        <article class="item">
-          <h4>${task.name}</h4>
-          <p>状态：${task.state}</p>
-          <small>paper_id=${task.paper_id ?? '-'} · ${new Date(task.created_at).toLocaleString()}</small>
+        <article class="item task-card">
+          <div class="item-head">
+            <div>
+              <h4>${task.name}</h4>
+              <small>${task.paper_title || `paper_id=${task.paper_id ?? '-'}`}</small>
+            </div>
+            ${renderTaskState(task.state)}
+          </div>
+          <div class="inline-meta muted-text">
+            <span>provider: ${task.provider || 'openai'}</span>
+            <span>创建：${formatDateTime(task.created_at)}</span>
+            <span>更新：${formatDateTime(task.updated_at || task.created_at)}</span>
+          </div>
         </article>
       `,
     )
@@ -21,6 +79,8 @@ function renderTasks(tasks) {
 
 async function loadTasks() {
   const tasks = await apiFetch(endpoints.tasks);
+  renderTaskSummary(tasks);
+  renderActiveTask(tasks);
   renderTasks(tasks);
 }
 
@@ -34,7 +94,19 @@ async function runAnalysisQueue(event) {
     body: JSON.stringify({ task_types: taskTypes, provider: 'openai' }),
   });
   analysisResponse.classList.remove('empty-state');
-  analysisResponse.innerHTML = `<h4>分析任务已排队</h4><p><strong>paper_id：</strong>${result.paper_id}</p><p><strong>model：</strong>${result.model}</p><p><strong>base_url：</strong>${result.base_url}</p>`;
+  analysisResponse.innerHTML = `
+    <div class="detail-stack">
+      <div class="eyebrow">任务已创建</div>
+      <h3>paper_id ${result.paper_id}</h3>
+      <p class="muted-text">已将 ${result.task_types.length} 个分析任务加入队列。</p>
+      <div class="meta-grid">
+        <div class="meta-card"><span>模型</span><strong>${result.model}</strong></div>
+        <div class="meta-card"><span>Base URL</span><strong>${result.base_url}</strong></div>
+        <div class="meta-card"><span>任务数</span><strong>${result.task_types.length}</strong></div>
+      </div>
+      <ul>${result.task_types.map((item) => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `;
   await loadTasks();
 }
 
@@ -46,13 +118,24 @@ async function runQa(event) {
     body: JSON.stringify({ question: formData.get('question'), scope_tags: ['large-squint'] }),
   });
   qaAnswer.classList.remove('empty-state');
-  qaAnswer.innerHTML = `<h4>问答结果</h4><p><strong>答案：</strong>${result.answer}</p><p><strong>模型：</strong>${result.model}</p><p><strong>引用编号：</strong>${result.citations.join(', ')}</p>`;
+  qaAnswer.innerHTML = `
+    <div class="detail-stack">
+      <div class="eyebrow">问答结果</div>
+      <h3>${result.model}</h3>
+      <p>${result.answer}</p>
+      <p class="muted-text">引用论文编号：${result.citations.join(', ')}</p>
+    </div>
+  `;
 }
 
 async function loadPage() {
   renderSidebar('analysis');
   await loadHealthStatus(healthStatus);
   await loadTasks();
+  window.clearInterval(window.__sarTaskPoller);
+  window.__sarTaskPoller = window.setInterval(() => {
+    loadTasks().catch(() => {});
+  }, 10000);
 }
 
 document.getElementById('analysis-form').addEventListener('submit', runAnalysisQueue);

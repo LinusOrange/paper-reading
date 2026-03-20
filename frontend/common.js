@@ -26,7 +26,7 @@ export async function apiFetch(url, options = {}) {
 function renderHealthSummary(health) {
   const serviceStatus = health.status === 'ok' ? '后端正常' : health.status;
   const openaiStatus = health.analysis_available
-    ? 'OpenAI 分析已启用'
+    ? `OpenAI 分析已启用 · ${health.openai_base_url}`
     : (health.status_message || '未配置 OpenAI Key（导入/浏览可用，分析/问答暂不可用）');
 
   return `
@@ -67,12 +67,43 @@ export function renderSidebar(activePage) {
 
 export function renderPaperCard(paper) {
   return `
-    <article class="item" data-paper-id="${paper.id}">
-      <h4>${paper.title}</h4>
-      <small>${paper.year} · ${paper.venue || 'Unknown venue'} · ${paper.status}</small>
+    <article class="item paper-card" data-paper-id="${paper.id}">
+      <div class="item-head">
+        <div>
+          <h4>${paper.title}</h4>
+          <small>${paper.year} · ${paper.venue || 'Unknown venue'}</small>
+        </div>
+        <span class="state-pill ${paper.status}">${paper.status}</span>
+      </div>
       <div class="badges">
         ${paper.tags.map((tag) => `<span class="badge">${tag}</span>`).join('')}
+        ${paper.pdf_preview_url ? '<span class="badge subtle">PDF 可预览</span>' : ''}
       </div>
     </article>
   `;
+}
+
+export function renderTaskState(state) {
+  const normalized = String(state || 'queued').toLowerCase();
+  const labelMap = {
+    queued: '已排队',
+    running: '处理中',
+    processing: '处理中',
+    succeeded: '已完成',
+    completed: '已完成',
+    failed: '失败',
+  };
+  const tone = {
+    queued: 'queued',
+    running: 'running',
+    processing: 'running',
+    succeeded: 'done',
+    completed: 'done',
+    failed: 'failed',
+  }[normalized] || 'queued';
+  return `<span class="state-pill ${tone}">${labelMap[normalized] || normalized}</span>`;
+}
+
+export function formatDateTime(value) {
+  return value ? new Date(value).toLocaleString() : '未知时间';
 }

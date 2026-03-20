@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -38,9 +39,17 @@ def _fallback_summary() -> PaperSummary:
     )
 
 
+def _resolve_pdf_path(paper: Paper) -> Path | None:
+    if not paper.pdf_object_key:
+        return None
+    path = Path(paper.pdf_object_key)
+    return path if path.exists() else None
+
+
 def _paper_to_schema(paper: Paper) -> PaperDetail:
     summary_json = paper.analysis.summary_json if paper.analysis else None
     summary = PaperSummary(**summary_json) if summary_json else _fallback_summary()
+    pdf_path = _resolve_pdf_path(paper)
     return PaperDetail(
         id=paper.id,
         title=paper.title,
@@ -51,6 +60,7 @@ def _paper_to_schema(paper: Paper) -> PaperDetail:
         status=PaperStatus(paper.status),
         tags=[tag.tag_name for tag in paper.tags],
         pdf_object_key=paper.pdf_object_key,
+        pdf_preview_url=f"/api/papers/{paper.id}/pdf" if pdf_path else None,
         full_text_available=bool(paper.full_text),
         summary=summary,
         created_at=paper.created_at,
@@ -187,6 +197,7 @@ def import_by_pdf(
         "message": "PDF uploaded and metadata parsed",
         "paper_id": paper.id,
         "pdf_object_key": str(destination),
+        "pdf_preview_url": f"/api/papers/{paper.id}/pdf",
         "filename": file.filename,
         "parsed_title": parsed_metadata["title"],
         "parsed_year": parsed_metadata["year"],
@@ -209,6 +220,19 @@ def get_paper(paper_id: int, db: Session = Depends(get_db)) -> PaperDetail:
     if not paper:
         raise HTTPException(status_code=404, detail="paper not found")
     return _paper_to_schema(paper)
+
+
+@router.get("/{paper_id}/pdf")
+def preview_pdf(paper_id: int, db: Session = Depends(get_db)) -> FileResponse:
+    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+
+    pdf_path = _resolve_pdf_path(paper)
+    if not pdf_path:
+        raise HTTPException(status_code=404, detail="pdf not found")
+
+    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_path.name)
 
 
 @router.patch("/{paper_id}", response_model=PaperDetail)

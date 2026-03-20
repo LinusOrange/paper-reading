@@ -47,6 +47,7 @@ class PaperDetail(PaperBase):
     status: PaperStatus = PaperStatus.new
     tags: list[str] = Field(default_factory=list)
     pdf_object_key: str | None = None
+    pdf_preview_url: str | None = None
     full_text_available: bool = False
     summary: PaperSummary | None = None
     created_at: datetime
@@ -109,8 +110,11 @@ class TaskInfo(BaseModel):
     id: str
     name: str
     paper_id: int | None = None
+    paper_title: str | None = None
     state: str
+    provider: str | None = None
     created_at: datetime
+    updated_at: datetime
 
 
 class CollectorRunRequest(BaseModel):

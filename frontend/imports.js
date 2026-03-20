@@ -34,11 +34,17 @@ async function runPdfImport(event) {
   const result = await apiFetch(endpoints.importPdf, { method: 'POST', body: formData });
   pdfResponse.classList.remove('empty-state');
   pdfResponse.innerHTML = `
-    <h4>PDF 上传成功</h4>
-    <p><strong>paper_id：</strong>${result.paper_id}</p>
-    <p><strong>文件：</strong>${result.filename}</p>
-    <p><strong>自动标题：</strong>${result.parsed_title}</p>
-    <p><strong>自动年份：</strong>${result.parsed_year || '未识别'}</p>
+    <div class="detail-stack">
+      <div class="eyebrow">PDF 上传成功</div>
+      <h3>${result.parsed_title}</h3>
+      <div class="meta-grid">
+        <div class="meta-card"><span>paper_id</span><strong>${result.paper_id}</strong></div>
+        <div class="meta-card"><span>文件</span><strong>${result.filename}</strong></div>
+        <div class="meta-card"><span>年份</span><strong>${result.parsed_year || '未识别'}</strong></div>
+      </div>
+      <p class="muted-text">系统已经自动解析元数据并创建了后续任务。</p>
+      ${result.pdf_preview_url ? `<p><a class="text-link" href="${result.pdf_preview_url}" target="_blank" rel="noreferrer">立即预览 PDF</a></p>` : ''}
+    </div>
   `;
 }
 

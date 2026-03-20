@@ -19,17 +19,26 @@
       </aside>
       <main class="content">
         <header class="page-header">
-          <div><h2>论文库</h2><p>浏览论文列表、查看结构化摘要与 PDF 路径。</p></div>
+          <div>
+            <div class="eyebrow">Library</div>
+            <h2>论文库与 PDF 预览</h2>
+            <p>浏览论文元数据、结构化摘要，并在页面内直接预览已上传的 PDF。</p>
+          </div>
           <div class="status-pill" id="health-status">正在检查服务…</div>
         </header>
-        <section class="panel split">
+        <section class="panel split-layout-wide">
           <div>
             <div class="panel-header"><h3>文献列表</h3></div>
             <div id="paper-list" class="list"></div>
           </div>
-          <div>
+          <div class="detail-column">
             <div class="panel-header"><h3>文献详情</h3></div>
             <div id="paper-detail" class="detail empty-state">请选择论文查看详情。</div>
+          </div>
+          <div class="preview-column">
+            <div class="panel-header"><h3>PDF 预览</h3></div>
+            <div id="pdf-preview-empty" class="detail empty-state">当论文存在 PDF 时，这里会直接显示预览。</div>
+            <div id="pdf-preview" class="pdf-preview-shell"></div>
           </div>
         </section>
       </main>
