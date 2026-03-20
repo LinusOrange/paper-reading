@@ -41,6 +41,8 @@ def healthcheck() -> dict:
         "topic": settings.primary_topic,
         "openai_enabled": settings.openai_enabled,
         "openai_configured": bool(settings.openai_api_key),
+        "openai_base_url": settings.openai_base_url,
+        "openai_model": settings.openai_model,
         "upload_dir": settings.upload_dir,
     }
 

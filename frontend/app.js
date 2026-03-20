@@ -138,7 +138,7 @@ async function loadDashboard() {
     apiFetch(endpoints.prompts),
   ]);
 
-  healthStatus.textContent = `${health.status} · ${health.topic} · OpenAI=${health.openai_configured ? 'configured' : 'missing key'}`;
+  healthStatus.textContent = `${health.status} · ${health.topic} · ${health.openai_model} · ${health.openai_configured ? 'OpenAI configured' : 'OpenAI missing key'}`;
   healthStatus.classList.add('healthy');
 
   state.papers = papers;
@@ -152,6 +152,21 @@ async function loadDashboard() {
   if (papers.length > 0) {
     showPaperDetail(papers[0].id);
   }
+}
+
+async function loadDashboardWithRetry(retries = 8, delayMs = 2500) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      await loadDashboard();
+      return;
+    } catch (error) {
+      lastError = error;
+      healthStatus.textContent = `后端启动中或不可用（第 ${attempt}/${retries} 次重试）：${error.message}`;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
 }
 
 async function runSearch(event) {
@@ -192,6 +207,7 @@ async function runQa(event) {
     <h4>问答结果</h4>
     <p><strong>问题：</strong>${result.question}</p>
     <p><strong>答案：</strong>${result.answer}</p>
+    <p><strong>模型：</strong>${result.model}</p>
     <p><strong>引用编号：</strong>${result.citations.join(', ')}</p>
   `;
 }
@@ -299,13 +315,15 @@ async function runAnalysisQueue(event) {
     <h4>分析任务已排队</h4>
     <p><strong>paper_id：</strong>${result.paper_id}</p>
     <p><strong>provider：</strong>${result.provider}</p>
+    <p><strong>model：</strong>${result.model}</p>
+    <p><strong>base_url：</strong>${result.base_url}</p>
     <p><strong>任务：</strong>${result.task_types.join(', ')}</p>
   `;
   await loadDashboard();
 }
 
 async function init() {
-  document.getElementById('refresh-button').addEventListener('click', loadDashboard);
+  document.getElementById('refresh-button').addEventListener('click', () => loadDashboardWithRetry(4, 1500));
   document.getElementById('search-form').addEventListener('submit', runSearch);
   document.getElementById('qa-form').addEventListener('submit', runQa);
   document.getElementById('collector-form').addEventListener('submit', runCollector);
@@ -315,10 +333,10 @@ async function init() {
   document.getElementById('analysis-form').addEventListener('submit', runAnalysisQueue);
 
   try {
-    await loadDashboard();
+    await loadDashboardWithRetry();
   } catch (error) {
     healthStatus.textContent = `服务不可用：${error.message}`;
-    paperDetail.textContent = '请先启动 docker compose 服务，然后刷新页面。';
+    paperDetail.textContent = '后端长时间未就绪，请检查 docker compose logs backend。';
   }
 }
 

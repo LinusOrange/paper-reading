@@ -3,7 +3,10 @@
 ## 启动方式
 
 ```bash
-OPENAI_API_KEY=your_key_here docker compose up --build
+OPENAI_API_KEY=your_key_here \
+OPENAI_BASE_URL=https://once.novai.su/v1 \
+OPENAI_MODEL=gpt-5.4 \
+  docker compose up --build
 ```
 
 启动后：
@@ -18,6 +21,16 @@ OPENAI_API_KEY=your_key_here docker compose up --build
 - `backend/`：FastAPI 接口骨架，已支持 PDF 上传与 OpenAI 分析任务排队入口
 - `database/schema.sql`：PostgreSQL 初始化表结构
 - `configs/sar-airborne-demo-collection.yaml`：SAR 方向采集配置
+
+## OpenAI 服务商配置
+
+当前仓库已支持以下运行参数：
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`（默认 `https://once.novai.su/v1`）
+- `OPENAI_MODEL`（默认 `gpt-5.4`）
+
+出于安全考虑，我没有把 API key 直接写进仓库文件，请通过环境变量传入。
 
 ## 本轮新增能力
 

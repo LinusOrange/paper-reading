@@ -7,6 +7,7 @@ from backend.app.config import settings
 from backend.app.db import get_db
 from backend.app.models import Paper
 from backend.app.schemas import AnalysisTaskRequest, PaperSummary, QARequest
+from backend.app.services.openai_provider import get_openai_runtime_config
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 qa_router = APIRouter(prefix="/qa", tags=["qa"])
@@ -45,7 +46,8 @@ def enqueue_openai_analysis(paper_id: int, payload: AnalysisTaskRequest, db: Ses
     if not paper:
         raise HTTPException(status_code=404, detail="paper not found")
 
-    if payload.provider == "openai" and not settings.openai_api_key:
+    runtime_config = get_openai_runtime_config()
+    if payload.provider == "openai" and not runtime_config["configured"]:
         raise HTTPException(status_code=400, detail="OPENAI_API_KEY is not configured")
 
     for task_name in payload.task_types:
@@ -56,6 +58,8 @@ def enqueue_openai_analysis(paper_id: int, payload: AnalysisTaskRequest, db: Ses
         "paper_id": paper_id,
         "provider": payload.provider,
         "task_types": payload.task_types,
+        "model": settings.openai_model,
+        "base_url": settings.openai_base_url,
     }
 
 
@@ -68,4 +72,5 @@ def ask_question(payload: QARequest, db: Session = Depends(get_db)) -> dict:
         "question": payload.question,
         "answer": "Demo answer: combine grounded SAR paper summaries from PostgreSQL and OpenAI analysis.",
         "citations": citations,
+        "model": settings.openai_model,
     }
