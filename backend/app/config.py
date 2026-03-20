@@ -1,6 +1,13 @@
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE_PATH = ROOT_DIR / ".env"
+load_dotenv(ENV_FILE_PATH, override=False)
 
 
 class Settings(BaseModel):
@@ -19,6 +26,8 @@ class Settings(BaseModel):
     openai_base_url: str = Field(default_factory=lambda: os.getenv("OPENAI_BASE_URL", "https://once.novai.su/v1"))
     openai_model: str = Field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-5.4"))
     upload_dir: str = Field(default_factory=lambda: os.getenv("UPLOAD_DIR", "/app/data/uploads"))
+    env_file_path: str = Field(default=str(ENV_FILE_PATH))
+    env_file_exists: bool = Field(default=ENV_FILE_PATH.exists())
 
 
 settings = Settings()

@@ -34,6 +34,14 @@ app.add_middleware(
 )
 
 
+def _mask_secret(secret: str | None) -> str | None:
+    if not secret:
+        return None
+    if len(secret) <= 8:
+        return "*" * len(secret)
+    return f"{secret[:4]}...{secret[-4:]}"
+
+
 @app.get("/healthz", tags=["system"])
 def healthcheck() -> dict:
     openai_configured = bool(settings.openai_api_key)
@@ -46,6 +54,9 @@ def healthcheck() -> dict:
         "analysis_available": analysis_available,
         "openai_base_url": settings.openai_base_url,
         "openai_model": settings.openai_model,
+        "openai_key_hint": _mask_secret(settings.openai_api_key),
+        "env_file_path": settings.env_file_path,
+        "env_file_exists": settings.env_file_exists,
         "upload_dir": settings.upload_dir,
         "status_message": "OpenAI 分析已启用。" if analysis_available else "当前还没有配置 OPENAI_API_KEY。论文导入、浏览和检索仍可正常使用，但分析与问答功能会保持不可用。",
     }

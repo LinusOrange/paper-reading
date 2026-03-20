@@ -2,11 +2,22 @@
 
 ## 启动方式
 
+推荐先复制一份 `.env`：
+
 ```bash
-OPENAI_API_KEY=your_key_here \
-OPENAI_BASE_URL=https://once.novai.su/v1 \
-OPENAI_MODEL=gpt-5.4 \
-  docker compose up --build
+cp .env.example .env
+```
+
+然后按需修改里面的：
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
+
+最后启动：
+
+```bash
+docker compose up --build
 ```
 
 启动后：
@@ -35,7 +46,38 @@ OPENAI_MODEL=gpt-5.4 \
 
 出于安全考虑，我没有把 API key 直接写进仓库文件，请通过环境变量传入。
 
+推荐做法：
+
+1. 执行 `cp .env.example .env`
+2. 在项目根目录编辑 `.env`
+3. 重新执行 `docker compose up --build`（或至少重启 backend 容器；环境变量只有在进程启动时才会重新读取）
+
+如果你是直接在宿主机运行 backend，而不是通过 Docker Compose，那么现在后端也会自动读取项目根目录下的 `.env` 文件。
+
 如果右上角状态提示显示“未配置 OpenAI Key（导入/浏览可用，分析/问答暂不可用）”，这是**正常现象**：表示后端在线，但当前环境还没有设置 `OPENAI_API_KEY`。这时论文导入、浏览、检索仍可使用，只有依赖 OpenAI 的分析与问答功能会被禁用。
+
+## 如何检查 OpenAI 配置是否真的生效
+
+你可以直接检查 `8000` 端口上的健康检查接口：
+
+```bash
+curl http://localhost:8000/healthz
+```
+
+重点看这些字段：
+
+- `openai_configured`：后端是否读到了 key
+- `analysis_available`：分析功能是否可用
+- `openai_base_url`：当前实际使用的 OpenAI base URL
+- `openai_model`：当前实际使用的模型
+- `openai_key_hint`：已加载 key 的脱敏提示
+- `env_file_path` / `env_file_exists`：后端识别到的 `.env` 路径和存在状态
+
+如果你走的是 Docker Compose，还可以进入容器再次确认：
+
+```bash
+docker compose exec backend python -c "from backend.app.config import settings; print({'configured': bool(settings.openai_api_key), 'base_url': settings.openai_base_url, 'model': settings.openai_model, 'env_file_path': settings.env_file_path, 'env_file_exists': settings.env_file_exists})"
+```
 
 ## 本轮新增能力
 
