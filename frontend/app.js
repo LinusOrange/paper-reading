@@ -9,6 +9,8 @@ const endpoints = {
   importDoi: '/api/papers/import/doi',
   importUrl: '/api/papers/import/url',
   importBibtex: '/api/papers/import/bibtex',
+  importPdf: '/api/papers/import/pdf',
+  enqueueAnalysis: (paperId) => `/api/analysis/${paperId}/enqueue`,
 };
 
 const state = {
@@ -27,14 +29,15 @@ const searchResults = document.getElementById('search-results');
 const qaAnswer = document.getElementById('qa-answer');
 const collectorResponse = document.getElementById('collector-response');
 const importResponse = document.getElementById('import-response');
+const pdfResponse = document.getElementById('pdf-response');
+const analysisResponse = document.getElementById('analysis-response');
 
 async function apiFetch(url, options = {}) {
-  const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
-  });
+  const headers = options.body instanceof FormData ? options.headers || {} : { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`Request failed: ${response.status} ${errorText}`);
   }
   return response.json();
 }
@@ -87,6 +90,7 @@ function showPaperDetail(paperId) {
     <h4>${paper.title}</h4>
     <p><strong>年份：</strong>${paper.year} &nbsp;&nbsp; <strong>来源：</strong>${paper.venue || 'Unknown'}</p>
     <p><strong>DOI：</strong>${paper.doi || 'N/A'}</p>
+    <p><strong>PDF：</strong>${paper.pdf_object_key || '暂无'}</p>
     <p><strong>场景：</strong>${summary.scenario || '未分析'}</p>
     <p><strong>问题：</strong>${summary.problem || '暂无'}</p>
     <p><strong>方法：</strong>${summary.method || '暂无'}</p>
@@ -95,6 +99,7 @@ function showPaperDetail(paperId) {
     <p><strong>贡献：</strong></p>
     <ul>${(summary.contributions || []).map((item) => `<li>${item}</li>`).join('')}</ul>
   `;
+  document.getElementById('analysis-paper-id').value = paper.id;
 }
 
 function renderTasks() {
@@ -133,7 +138,7 @@ async function loadDashboard() {
     apiFetch(endpoints.prompts),
   ]);
 
-  healthStatus.textContent = `${health.status} · ${health.topic}`;
+  healthStatus.textContent = `${health.status} · ${health.topic} · OpenAI=${health.openai_configured ? 'configured' : 'missing key'}`;
   healthStatus.classList.add('healthy');
 
   state.papers = papers;
@@ -258,6 +263,47 @@ async function runBibtexImport(event) {
   await loadDashboard();
 }
 
+async function runPdfImport(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const result = await apiFetch(endpoints.importPdf, {
+    method: 'POST',
+    body: formData,
+  });
+  pdfResponse.classList.remove('empty-state');
+  pdfResponse.innerHTML = `
+    <h4>PDF 上传成功</h4>
+    <p><strong>消息：</strong>${result.message}</p>
+    <p><strong>paper_id：</strong>${result.paper_id}</p>
+    <p><strong>文件：</strong>${result.filename}</p>
+    <p><strong>路径：</strong>${result.pdf_object_key}</p>
+  `;
+  await loadDashboard();
+}
+
+async function runAnalysisQueue(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const paperId = formData.get('paper_id');
+  const taskTypes = String(formData.get('task_types'))
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const result = await apiFetch(endpoints.enqueueAnalysis(paperId), {
+    method: 'POST',
+    body: JSON.stringify({ task_types: taskTypes, provider: 'openai' }),
+  });
+  analysisResponse.classList.remove('empty-state');
+  analysisResponse.innerHTML = `
+    <h4>分析任务已排队</h4>
+    <p><strong>paper_id：</strong>${result.paper_id}</p>
+    <p><strong>provider：</strong>${result.provider}</p>
+    <p><strong>任务：</strong>${result.task_types.join(', ')}</p>
+  `;
+  await loadDashboard();
+}
+
 async function init() {
   document.getElementById('refresh-button').addEventListener('click', loadDashboard);
   document.getElementById('search-form').addEventListener('submit', runSearch);
@@ -265,6 +311,8 @@ async function init() {
   document.getElementById('collector-form').addEventListener('submit', runCollector);
   document.getElementById('import-form').addEventListener('submit', runImport);
   document.getElementById('bibtex-form').addEventListener('submit', runBibtexImport);
+  document.getElementById('pdf-form').addEventListener('submit', runPdfImport);
+  document.getElementById('analysis-form').addEventListener('submit', runAnalysisQueue);
 
   try {
     await loadDashboard();

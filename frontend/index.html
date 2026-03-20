@@ -17,6 +17,7 @@
           <a href="#dashboard">总览</a>
           <a href="#imports">文献导入</a>
           <a href="#papers">文献列表</a>
+          <a href="#analysis">分析任务</a>
           <a href="#search">专题检索</a>
           <a href="#tasks">任务面板</a>
           <a href="#prompts">Prompt 配置</a>
@@ -83,6 +84,43 @@
           </div>
         </section>
 
+        <section id="pdf-upload" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>PDF 上传</h3>
+            </div>
+            <form id="pdf-form" class="search-form">
+              <label>
+                论文标题
+                <input name="title" type="text" value="Uploaded SAR PDF Demo" />
+              </label>
+              <label>
+                年份
+                <input name="year" type="number" value="2026" />
+              </label>
+              <label>
+                来源
+                <input name="venue" type="text" value="Internal Upload" />
+              </label>
+              <label>
+                方向标签
+                <input name="direction_hint" type="text" value="airborne-sar,large-squint" />
+              </label>
+              <label>
+                PDF 文件
+                <input name="file" type="file" accept="application/pdf" />
+              </label>
+              <button type="submit">上传 PDF</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>PDF 上传结果</h3>
+            </div>
+            <div id="pdf-response" class="detail empty-state">上传 PDF 后，这里会展示 paper_id 与存储路径。</div>
+          </div>
+        </section>
+
         <section id="papers" class="panel split">
           <div>
             <div class="panel-header">
@@ -95,6 +133,31 @@
               <h3>文献详情</h3>
             </div>
             <div id="paper-detail" class="detail empty-state">请选择左侧论文查看结构化摘要。</div>
+          </div>
+        </section>
+
+        <section id="analysis" class="panel split-search">
+          <div>
+            <div class="panel-header">
+              <h3>OpenAI 分析任务入口</h3>
+            </div>
+            <form id="analysis-form" class="search-form">
+              <label>
+                paper_id
+                <input id="analysis-paper-id" name="paper_id" type="number" value="1" />
+              </label>
+              <label>
+                任务列表（逗号分隔）
+                <input name="task_types" type="text" value="generate_summary,extract_entities,recommend_tags" />
+              </label>
+              <button type="submit">创建 OpenAI 分析任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header">
+              <h3>分析任务返回</h3>
+            </div>
+            <div id="analysis-response" class="detail empty-state">这里展示 OpenAI 分析任务排队结果。</div>
           </div>
         </section>
 

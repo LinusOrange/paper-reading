@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,7 @@ from backend.app.models import Base, engine
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_demo_data(db)
@@ -38,7 +40,8 @@ def healthcheck() -> dict:
         "status": "ok",
         "topic": settings.primary_topic,
         "openai_enabled": settings.openai_enabled,
-        "database_url": settings.database_url,
+        "openai_configured": bool(settings.openai_api_key),
+        "upload_dir": settings.upload_dir,
     }
 
 

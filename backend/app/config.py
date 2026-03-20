@@ -15,6 +15,8 @@ class Settings(BaseModel):
             "postgresql+psycopg://sar_demo:sar_demo@postgres:5432/sar_demo",
         )
     )
+    openai_api_key: str | None = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY"))
+    upload_dir: str = Field(default_factory=lambda: os.getenv("UPLOAD_DIR", "/app/data/uploads"))
 
 
 settings = Settings()

@@ -94,6 +94,11 @@ class SemanticSearchRequest(BaseModel):
     direction_hint: list[DirectionTag] = Field(default_factory=list)
 
 
+class AnalysisTaskRequest(BaseModel):
+    task_types: list[str] = Field(default_factory=lambda: ["generate_summary", "extract_entities", "recommend_tags"])
+    provider: str = Field(default="openai")
+
+
 class QARequest(BaseModel):
     question: str
     scope_tags: list[DirectionTag] = Field(default_factory=list)

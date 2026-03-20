@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import os
+import shutil
 from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from backend.app.config import settings
 from backend.app.db import get_db
-from backend.app.models import Paper, PaperAnalysis, PaperTag, ProcessingTask
+from backend.app.models import Paper, PaperTag, ProcessingTask
 from backend.app.schemas import (
     ImportBibtexRequest,
     ImportDOIRequest,
@@ -75,6 +80,12 @@ def _attach_direction_tags(db: Session, paper_id: int, direction_hint: list[str]
             db.add(PaperTag(paper_id=paper_id, tag_name=tag_name, tag_category="topic", source="request"))
 
 
+def _normalize_direction_hint(value: str | None) -> list[str]:
+    if not value:
+        return ["airborne-sar"]
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 @router.post("/import/doi", response_model=dict)
 def import_by_doi(payload: ImportDOIRequest, db: Session = Depends(get_db)) -> dict:
     paper = db.scalar(select(Paper).where(Paper.doi == payload.doi))
@@ -137,19 +148,48 @@ def import_by_bibtex(payload: ImportBibtexRequest, db: Session = Depends(get_db)
 
 
 @router.post("/import/pdf", response_model=dict)
-def import_by_pdf(db: Session = Depends(get_db)) -> dict:
+def import_by_pdf(
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    year: int | None = Form(default=None),
+    venue: str | None = Form(default=None),
+    direction_hint: str | None = Form(default=None),
+    auto_analyze: bool = Form(default=True),
+    db: Session = Depends(get_db),
+) -> dict:
+    upload_dir = Path(settings.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    suffix = Path(file.filename or "upload.pdf").suffix or ".pdf"
+    object_name = f"{uuid4().hex}{suffix}"
+    destination = upload_dir / object_name
+    with destination.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
     paper = Paper(
-        title="Uploaded PDF placeholder",
-        abstract="PDF upload endpoint scaffolded for next phase.",
-        year=datetime.now(timezone.utc).year,
+        title=title or Path(file.filename or "uploaded.pdf").stem,
+        abstract="Imported from uploaded PDF.",
+        year=year or datetime.now(timezone.utc).year,
+        venue=venue,
+        pdf_object_key=str(destination),
         status="metadata_ready",
     )
     db.add(paper)
     db.flush()
+    _attach_direction_tags(db, paper.id, _normalize_direction_hint(direction_hint))
     _create_processing_task(db, paper.id, "extract_text")
-    _create_processing_task(db, paper.id, "generate_summary")
+    if auto_analyze:
+        _create_processing_task(db, paper.id, "generate_summary")
+        _create_processing_task(db, paper.id, "extract_entities")
+        _create_processing_task(db, paper.id, "recommend_tags")
     db.commit()
-    return {"message": "PDF upload endpoint scaffolded", "paper_id": paper.id}
+
+    return {
+        "message": "PDF uploaded and queued",
+        "paper_id": paper.id,
+        "pdf_object_key": str(destination),
+        "filename": file.filename,
+    }
 
 
 @router.get("", response_model=list[PaperDetail])

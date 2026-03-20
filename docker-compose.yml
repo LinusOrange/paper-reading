@@ -23,8 +23,12 @@ services:
       - postgres
     environment:
       DATABASE_URL: postgresql+psycopg://sar_demo:sar_demo@postgres:5432/sar_demo
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      UPLOAD_DIR: /app/data/uploads
     ports:
       - "8000:8000"
+    volumes:
+      - uploads_data:/app/data/uploads
 
   frontend:
     build:
@@ -38,3 +42,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

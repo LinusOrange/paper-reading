@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from backend.app.api.papers import _fallback_summary
+from backend.app.api.papers import _fallback_summary, _create_processing_task
+from backend.app.config import settings
 from backend.app.db import get_db
 from backend.app.models import Paper
-from backend.app.schemas import PaperSummary, QARequest
+from backend.app.schemas import AnalysisTaskRequest, PaperSummary, QARequest
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 qa_router = APIRouter(prefix="/qa", tags=["qa"])
@@ -36,6 +37,26 @@ def recommend_tags(paper_id: int, db: Session = Depends(get_db)) -> dict:
     if not paper:
         raise HTTPException(status_code=404, detail="paper not found")
     return {"paper_id": paper_id, "tags": [tag.tag_name for tag in paper.tags]}
+
+
+@router.post("/{paper_id}/enqueue", response_model=dict)
+def enqueue_openai_analysis(paper_id: int, payload: AnalysisTaskRequest, db: Session = Depends(get_db)) -> dict:
+    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+
+    if payload.provider == "openai" and not settings.openai_api_key:
+        raise HTTPException(status_code=400, detail="OPENAI_API_KEY is not configured")
+
+    for task_name in payload.task_types:
+        _create_processing_task(db, paper_id, task_name, provider=payload.provider)
+    db.commit()
+    return {
+        "message": "analysis tasks queued",
+        "paper_id": paper_id,
+        "provider": payload.provider,
+        "task_types": payload.task_types,
+    }
 
 
 @qa_router.post("/ask", response_model=dict)
