@@ -46,7 +46,7 @@ nav a {
   background: transparent;
   font-size: 14px;
 }
-nav a:hover { background: var(--accent-soft); }
+nav a:hover, nav a.active-link { background: var(--accent-soft); }
 
 .content {
   padding: 20px;

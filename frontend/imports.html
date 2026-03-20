@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAR Demo · Imports</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand"><h1>SAR Demo</h1><p>机载高分辨率 SAR 成像文献系统</p></div>
+        <nav>
+          <a href="/index.html" data-nav="dashboard">总览</a>
+          <a href="/papers.html" data-nav="papers">论文库</a>
+          <a href="/imports.html" data-nav="imports">文献导入</a>
+          <a href="/analysis.html" data-nav="analysis">分析与问答</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="page-header">
+          <div><h2>文献导入</h2><p>支持 DOI / URL / BibTeX / PDF 导入，PDF 标题与年份将自动解析。</p></div>
+          <div class="status-pill" id="health-status">正在检查服务…</div>
+        </header>
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>DOI / URL 导入</h3></div>
+            <form id="import-form" class="search-form">
+              <label>导入类型<select name="import_type"><option value="doi">doi</option><option value="url">url</option></select></label>
+              <label>内容<input name="value" type="text" value="10.0000/demo-new" /></label>
+              <label>方向标签<select name="direction_hint"><option value="large-squint">large-squint</option><option value="high-speed">high-speed</option><option value="airborne-sar">airborne-sar</option></select></label>
+              <button type="submit">创建导入任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header"><h3>BibTeX 导入</h3></div>
+            <form id="bibtex-form" class="search-form">
+              <label>BibTeX 内容<textarea name="bibtex" rows="8">@article{demo,title={Large Squint SAR Demo}}</textarea></label>
+              <button type="submit">导入 BibTeX</button>
+            </form>
+            <div id="import-response" class="detail empty-state">这里展示 DOI / URL / BibTeX 导入结果。</div>
+          </div>
+        </section>
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>PDF 上传</h3></div>
+            <form id="pdf-form" class="search-form">
+              <label>方向标签<input name="direction_hint" type="text" value="airborne-sar,large-squint" /></label>
+              <label>PDF 文件<input name="file" type="file" accept="application/pdf" /></label>
+              <button type="submit">上传 PDF 并自动解析</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header"><h3>PDF 解析结果</h3></div>
+            <div id="pdf-response" class="detail empty-state">上传后会展示自动解析出的标题、年份和 paper_id。</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/imports.js"></script>
+  </body>
+</html>

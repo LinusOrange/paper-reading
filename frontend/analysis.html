@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAR Demo · Analysis</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand"><h1>SAR Demo</h1><p>机载高分辨率 SAR 成像文献系统</p></div>
+        <nav>
+          <a href="/index.html" data-nav="dashboard">总览</a>
+          <a href="/papers.html" data-nav="papers">论文库</a>
+          <a href="/imports.html" data-nav="imports">文献导入</a>
+          <a href="/analysis.html" data-nav="analysis">分析与问答</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="page-header">
+          <div><h2>分析与问答</h2><p>创建 OpenAI 分析任务，查看任务队列，并进行问答。</p></div>
+          <div class="status-pill" id="health-status">正在检查服务…</div>
+        </header>
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>OpenAI 分析任务入口</h3></div>
+            <form id="analysis-form" class="search-form">
+              <label>paper_id<input id="analysis-paper-id" name="paper_id" type="number" value="1" /></label>
+              <label>任务列表（逗号分隔）<input name="task_types" type="text" value="generate_summary,extract_entities,recommend_tags" /></label>
+              <button type="submit">创建 OpenAI 分析任务</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header"><h3>分析任务返回</h3></div>
+            <div id="analysis-response" class="detail empty-state">这里展示 OpenAI 分析任务排队结果。</div>
+          </div>
+        </section>
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>问答</h3></div>
+            <form id="qa-form" class="search-form">
+              <label>问题<textarea name="question" rows="4">大斜视场景下哪些方法适合高分辨成像？</textarea></label>
+              <button type="submit">发送问答</button>
+            </form>
+            <div id="qa-answer" class="detail empty-state">这里展示问答结果。</div>
+          </div>
+          <div>
+            <div class="panel-header"><h3>任务队列</h3></div>
+            <div id="task-list" class="list compact"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/analysis-page.js"></script>
+  </body>
+</html>

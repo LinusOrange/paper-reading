@@ -11,14 +11,17 @@ OPENAI_MODEL=gpt-5.4 \
 
 启动后：
 
-- 前端：http://localhost:3000
+- 总览页：http://localhost:3000/index.html
+- 论文库：http://localhost:3000/papers.html
+- 文献导入：http://localhost:3000/imports.html
+- 分析与问答：http://localhost:3000/analysis.html
 - 后端：http://localhost:8000
 - 健康检查：http://localhost:8000/healthz
 
 ## 当前组成
 
-- `frontend/`：静态前端页面，通过 Nginx 代理 `/api` 和 `/healthz`
-- `backend/`：FastAPI 接口骨架，已支持 PDF 上传与 OpenAI 分析任务排队入口
+- `frontend/`：静态多页面前端，按模块拆成总览、论文库、导入、分析页面
+- `backend/`：FastAPI 接口骨架，已支持 PDF 上传、自动解析标题/年份、OpenAI 分析任务排队入口
 - `database/schema.sql`：PostgreSQL 初始化表结构
 - `configs/sar-airborne-demo-collection.yaml`：SAR 方向采集配置
 
@@ -35,8 +38,9 @@ OPENAI_MODEL=gpt-5.4 \
 ## 本轮新增能力
 
 - 支持通过 `POST /api/papers/import/pdf` 上传 PDF
+- PDF 上传后自动解析标题与年份
 - 支持通过 `POST /api/analysis/{paper_id}/enqueue` 创建 OpenAI 分析任务
-- `backend` 容器新增 `uploads_data` 卷用于保存上传文件
+- 前端已拆成多页面导航，减少单页面过长导致的滑动问题
 
 ## 502 排查建议
 

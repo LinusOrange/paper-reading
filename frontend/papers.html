@@ -3,16 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SAR Demo · Dashboard</title>
+    <title>SAR Demo · Papers</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="layout">
       <aside class="sidebar">
-        <div class="brand">
-          <h1>SAR Demo</h1>
-          <p>机载高分辨率 SAR 成像文献系统</p>
-        </div>
+        <div class="brand"><h1>SAR Demo</h1><p>机载高分辨率 SAR 成像文献系统</p></div>
         <nav>
           <a href="/index.html" data-nav="dashboard">总览</a>
           <a href="/papers.html" data-nav="papers">论文库</a>
@@ -22,25 +19,21 @@
       </aside>
       <main class="content">
         <header class="page-header">
-          <div>
-            <h2>Dashboard</h2>
-            <p>查看系统概览、最近论文和任务数量。</p>
-          </div>
+          <div><h2>论文库</h2><p>浏览论文列表、查看结构化摘要与 PDF 路径。</p></div>
           <div class="status-pill" id="health-status">正在检查服务…</div>
         </header>
-        <section class="panel">
-          <div class="panel-header">
-            <h3>系统总览</h3>
-            <button id="refresh-button">刷新数据</button>
+        <section class="panel split">
+          <div>
+            <div class="panel-header"><h3>文献列表</h3></div>
+            <div id="paper-list" class="list"></div>
           </div>
-          <div class="cards" id="stats-cards"></div>
-        </section>
-        <section class="panel">
-          <div class="panel-header"><h3>最近论文</h3></div>
-          <div id="recent-papers" class="list"></div>
+          <div>
+            <div class="panel-header"><h3>文献详情</h3></div>
+            <div id="paper-detail" class="detail empty-state">请选择论文查看详情。</div>
+          </div>
         </section>
       </main>
     </div>
-    <script type="module" src="/dashboard.js"></script>
+    <script type="module" src="/papers.js"></script>
   </body>
 </html>

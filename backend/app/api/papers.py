@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +21,7 @@ from backend.app.schemas import (
     PaperSummary,
     PaperUpdateRequest,
 )
+from backend.app.services.pdf_parser import extract_pdf_metadata
 
 router = APIRouter(prefix="/papers", tags=["papers"])
 
@@ -150,9 +150,6 @@ def import_by_bibtex(payload: ImportBibtexRequest, db: Session = Depends(get_db)
 @router.post("/import/pdf", response_model=dict)
 def import_by_pdf(
     file: UploadFile = File(...),
-    title: str | None = Form(default=None),
-    year: int | None = Form(default=None),
-    venue: str | None = Form(default=None),
     direction_hint: str | None = Form(default=None),
     auto_analyze: bool = Form(default=True),
     db: Session = Depends(get_db),
@@ -166,11 +163,13 @@ def import_by_pdf(
     with destination.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    parsed_metadata = extract_pdf_metadata(str(destination), file.filename or object_name)
+
     paper = Paper(
-        title=title or Path(file.filename or "uploaded.pdf").stem,
+        title=parsed_metadata["title"],
         abstract="Imported from uploaded PDF.",
-        year=year or datetime.now(timezone.utc).year,
-        venue=venue,
+        year=parsed_metadata["year"] or datetime.now(timezone.utc).year,
+        venue=parsed_metadata["venue"],
         pdf_object_key=str(destination),
         status="metadata_ready",
     )
@@ -185,10 +184,12 @@ def import_by_pdf(
     db.commit()
 
     return {
-        "message": "PDF uploaded and queued",
+        "message": "PDF uploaded and metadata parsed",
         "paper_id": paper.id,
         "pdf_object_key": str(destination),
         "filename": file.filename,
+        "parsed_title": parsed_metadata["title"],
+        "parsed_year": parsed_metadata["year"],
     }
 
 
