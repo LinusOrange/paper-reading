@@ -6,7 +6,8 @@ from backend.app.api.papers import _fallback_summary, _create_processing_task
 from backend.app.config import settings
 from backend.app.db import get_db
 from backend.app.models import Paper
-from backend.app.schemas import AnalysisTaskRequest, PaperSummary, QARequest
+from backend.app.schemas import AnalysisTaskRequest, LiteratureWorkflowRequest, PaperSummary, QARequest
+from backend.app.services.literature_workflow import run_literature_workflow
 from backend.app.services.openai_provider import get_openai_runtime_config
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -87,3 +88,13 @@ def ask_question(payload: QARequest, db: Session = Depends(get_db)) -> dict:
         "citations": citations,
         "model": settings.openai_model,
     }
+
+
+@router.post("/literature-workflow", response_model=dict)
+def literature_workflow(payload: LiteratureWorkflowRequest) -> dict:
+    result = run_literature_workflow(
+        user_requirement=payload.user_requirement,
+        prompt_template=payload.prompt_template,
+        use_web_search=payload.use_web_search,
+    )
+    return result

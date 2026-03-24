@@ -12,6 +12,7 @@ export const endpoints = {
   importBibtex: '/api/papers/import/bibtex',
   importPdf: '/api/papers/import/pdf',
   enqueueAnalysis: (paperId) => `/api/analysis/${paperId}/enqueue`,
+  literatureWorkflow: '/api/analysis/literature-workflow',
   tags: '/api/papers/paper-tags',
   createTag: (paperId) => `/api/papers/paper-tags?paper_id=${paperId}`,
   updateTag: (tagId) => `/api/papers/paper-tags/${tagId}`,

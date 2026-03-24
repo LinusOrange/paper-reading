@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAR Demo · Codex 文献检索工作流</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand"><h1>SAR Demo</h1><p>机载高分辨率 SAR 成像文献系统</p></div>
+        <nav>
+          <a href="/index.html" data-nav="dashboard">总览</a>
+          <a href="/papers.html" data-nav="papers">论文库</a>
+          <a href="/imports.html" data-nav="imports">文献导入</a>
+          <a href="/analysis.html" data-nav="analysis">分析与问答</a>
+          <a href="/literature.html" data-nav="literature">Codex文献检索</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="page-header">
+          <div>
+            <div class="eyebrow">Literature Workflow</div>
+            <h2>Codex 双阶段文献检索</h2>
+            <p>先自动改写提示词，再用改写后的提示词执行联网文献检索。</p>
+          </div>
+          <div class="status-pill" id="health-status">正在检查服务…</div>
+        </header>
+
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>输入需求</h3></div>
+            <form id="literature-form" class="search-form">
+              <label>研究需求（可自由输入）
+                <textarea id="user-requirement" name="user_requirement" rows="8">机载SAR成像领域的论文系统整理与综述构建，重点关注NCS/CSA及复杂几何场景下的成像算法。</textarea>
+              </label>
+              <label>提示词模板（可粘贴你给出的完整版）
+                <textarea id="prompt-template" name="prompt_template" rows="14"></textarea>
+              </label>
+              <label style="display:flex;gap:8px;align-items:center;">
+                <input id="use-web-search" name="use_web_search" type="checkbox" checked />
+                启用联网检索（Web Search）
+              </label>
+              <button type="submit">生成新提示词并检索文献</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header"><h3>执行状态</h3></div>
+            <div id="workflow-status" class="detail empty-state">提交后这里会显示执行状态。</div>
+          </div>
+        </section>
+
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>第一步：Codex 生成的新提示词</h3></div>
+            <div id="optimized-prompt" class="detail empty-state">这里显示改写后的提示词。</div>
+          </div>
+          <div>
+            <div class="panel-header"><h3>第二步：基于新提示词的文献检索结果</h3></div>
+            <div id="literature-result" class="detail empty-state">这里显示文献检索输出。</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/literature.js"></script>
+  </body>
+</html>

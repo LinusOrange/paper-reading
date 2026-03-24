@@ -139,6 +139,12 @@ class QARequest(BaseModel):
     top_k: int = Field(default=8, ge=1, le=20)
 
 
+class LiteratureWorkflowRequest(BaseModel):
+    user_requirement: str = Field(..., description="User's literature search requirement in natural language")
+    prompt_template: str | None = Field(default=None, description="Optional custom base prompt template")
+    use_web_search: bool = Field(default=True)
+
+
 class TaskInfo(BaseModel):
     id: str
     name: str
