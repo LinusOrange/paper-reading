@@ -18,7 +18,7 @@
           <a href="/literature.html" data-nav="literature">Codex文献检索</a>
         </nav>
       </aside>
-      <main class="content">
+      <main class="content" id="literature-app">
         <header class="page-header">
           <div>
             <div class="eyebrow">Literature Workflow</div>
@@ -31,38 +31,46 @@
         <section class="panel split-search">
           <div>
             <div class="panel-header"><h3>输入需求</h3></div>
-            <form id="literature-form" class="search-form">
+            <form class="search-form" @submit.prevent="runWorkflow">
               <label>研究需求（可自由输入）
-                <textarea id="user-requirement" name="user_requirement" rows="8">机载SAR成像领域的论文系统整理与综述构建，重点关注NCS/CSA及复杂几何场景下的成像算法。</textarea>
+                <textarea v-model="form.user_requirement" name="user_requirement" rows="8"></textarea>
               </label>
               <label>提示词模板（可粘贴你给出的完整版）
-                <textarea id="prompt-template" name="prompt_template" rows="14"></textarea>
+                <textarea v-model="form.prompt_template" name="prompt_template" rows="14"></textarea>
               </label>
               <label class="inline-checkbox">
-                <input id="use-web-search" name="use_web_search" type="checkbox" checked />
+                <input v-model="form.use_web_search" name="use_web_search" type="checkbox" />
                 启用联网检索（Web Search）
               </label>
-              <button type="submit">生成新提示词并检索文献</button>
+              <button type="submit" :disabled="loading">{{ buttonText }}</button>
             </form>
           </div>
           <div>
             <div class="panel-header"><h3>执行状态</h3></div>
-            <div id="workflow-status" class="detail empty-state">提交后这里会显示执行状态。</div>
+            <div class="detail" :class="statusError ? 'error-state' : ''">
+              <p>{{ statusText }}</p>
+              <p class="muted-text">请求地址：{{ workflowEndpoint }}</p>
+            </div>
           </div>
         </section>
 
         <section class="panel split-search">
           <div>
             <div class="panel-header"><h3>第一步：Codex 生成的新提示词</h3></div>
-            <div id="optimized-prompt" class="detail empty-state">这里显示改写后的提示词。</div>
+            <div class="detail">
+              <pre style="white-space:pre-wrap;word-break:break-word;margin:0;">{{ optimizedPrompt || '这里显示改写后的提示词。' }}</pre>
+            </div>
           </div>
           <div>
             <div class="panel-header"><h3>第二步：基于新提示词的文献检索结果</h3></div>
-            <div id="literature-result" class="detail empty-state">这里显示文献检索输出。</div>
+            <div class="detail">
+              <pre style="white-space:pre-wrap;word-break:break-word;margin:0;">{{ searchResult || '这里显示文献检索输出。' }}</pre>
+            </div>
           </div>
         </section>
       </main>
     </div>
-    <script type="module" src="/literature.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script type="module" src="/literature-vue.js"></script>
   </body>
 </html>
