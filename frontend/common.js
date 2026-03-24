@@ -68,6 +68,17 @@ export async function loadHealthStatus(element, retries = 8, delayMs = 2500) {
 }
 
 export function renderSidebar(activePage) {
+  document.querySelectorAll('.sidebar nav').forEach((nav) => {
+    const exists = nav.querySelector('[data-nav="literature"]');
+    if (!exists) {
+      const anchor = document.createElement('a');
+      anchor.href = '/literature.html';
+      anchor.dataset.nav = 'literature';
+      anchor.textContent = 'Codex文献检索';
+      nav.appendChild(anchor);
+    }
+  });
+
   document.querySelectorAll('[data-nav]').forEach((anchor) => {
     if (anchor.dataset.nav === activePage) {
       anchor.classList.add('active-link');

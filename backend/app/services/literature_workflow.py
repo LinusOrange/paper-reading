@@ -84,7 +84,11 @@ def _search_with_prompt(client, optimized_prompt: str, use_web_search: bool) -> 
             "input": [
                 {
                     "role": "system",
-                    "content": "你是SAR文献检索与综述助手。请严格按用户提示词执行，并保留核验标记。",
+                    "content": (
+                        "你是SAR文献检索与综述助手。请严格按用户提示词执行，并保留核验标记。"
+                        "当启用web_search时，应尽量给出论文标题、作者、年份、DOI/链接、摘要要点与来源。"
+                        "对于无法确认的摘要或元数据，标注UNVERIFIED。"
+                    ),
                 },
                 {"role": "user", "content": optimized_prompt},
             ],
