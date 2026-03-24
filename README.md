@@ -167,3 +167,21 @@ docker compose logs -f frontend
 ```bash
 docker compose up --build -d
 ```
+
+
+## 论文分析流水线（正式版起步）
+
+当前 worker 已不再是纯占位符，处理 `processing_tasks` 时按任务类型执行固定流水线：
+
+1. `extract_text`：提取或构建论文可用文本
+2. `generate_summary`：优先调用 OpenAI 生成结构化摘要（失败时回退到规则摘要）
+3. `extract_entities`：基于摘要/文本提取方法与关键词
+4. `recommend_tags`：基于摘要与实体结果推荐方向标签并写入 `paper_tags`
+
+执行结果会写回：
+
+- `paper_analysis.summary_json`
+- `paper_analysis.entities_json`
+- `paper_tags`
+
+你可以通过 `GET /api/tasks` 观察任务是否从 `queued -> running -> completed/failed`。

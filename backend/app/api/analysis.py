@@ -68,9 +68,22 @@ def ask_question(payload: QARequest, db: Session = Depends(get_db)) -> dict:
     stmt = select(Paper).options(selectinload(Paper.tags), selectinload(Paper.analysis)).limit(payload.top_k)
     papers = db.scalars(stmt).all()
     citations = [paper.id for paper in papers]
+
+    snippets: list[str] = []
+    for paper in papers:
+        summary = paper.analysis.summary_json if paper.analysis else {}
+        method = summary.get("method", "method pending") if isinstance(summary, dict) else "method pending"
+        scenario = summary.get("scenario", "scenario pending") if isinstance(summary, dict) else "scenario pending"
+        snippets.append(f"[{paper.id}] {paper.title} | {scenario} | {method}")
+
+    if snippets:
+        answer = "基于当前入库论文的结构化摘要，候选方法如下：\n" + "\n".join(snippets)
+    else:
+        answer = "当前没有可用论文，请先导入论文并完成分析流水线任务。"
+
     return {
         "question": payload.question,
-        "answer": "Demo answer: combine grounded SAR paper summaries from PostgreSQL and OpenAI analysis.",
+        "answer": answer,
         "citations": citations,
         "model": settings.openai_model,
     }
