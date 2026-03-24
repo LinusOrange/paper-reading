@@ -1,6 +1,7 @@
 export const endpoints = {
   health: '/healthz',
   papers: '/api/papers',
+  papersByTag: (tag) => `/api/papers?tag=${encodeURIComponent(tag)}`,
   tasks: '/api/tasks',
   prompts: '/api/config/prompts',
   search: '/api/search/filter',
@@ -11,6 +12,12 @@ export const endpoints = {
   importBibtex: '/api/papers/import/bibtex',
   importPdf: '/api/papers/import/pdf',
   enqueueAnalysis: (paperId) => `/api/analysis/${paperId}/enqueue`,
+  tags: '/api/papers/paper-tags',
+  createTag: (paperId) => `/api/papers/paper-tags?paper_id=${paperId}`,
+  updateTag: (tagId) => `/api/papers/paper-tags/${tagId}`,
+  deleteTag: (tagId) => `/api/papers/paper-tags/${tagId}`,
+  updatePaper: (paperId) => `/api/papers/${paperId}`,
+  deletePaper: (paperId) => `/api/papers/${paperId}`,
 };
 
 export async function apiFetch(url, options = {}) {

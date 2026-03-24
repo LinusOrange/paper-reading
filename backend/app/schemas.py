@@ -80,6 +80,35 @@ class PaperUpdateRequest(BaseModel):
     status: PaperStatus | None = None
 
 
+class PaperCreateRequest(BaseModel):
+    title: str
+    year: int = Field(..., ge=1900, le=2100)
+    venue: str | None = None
+    doi: str | None = None
+    source_url: str | None = None
+    abstract: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class TagCreateRequest(BaseModel):
+    tag_name: str
+    tag_category: str = "topic"
+
+
+class TagUpdateRequest(BaseModel):
+    tag_name: str | None = None
+    tag_category: str | None = None
+
+
+class TagInfo(BaseModel):
+    id: int
+    paper_id: int
+    tag_name: str
+    tag_category: str
+    source: str
+    created_at: datetime
+
+
 class PaperFilterRequest(BaseModel):
     query: str | None = None
     years: list[int] = Field(default_factory=list)

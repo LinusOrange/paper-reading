@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -17,10 +17,14 @@ from backend.app.schemas import (
     ImportBibtexRequest,
     ImportDOIRequest,
     ImportURLRequest,
+    PaperCreateRequest,
     PaperDetail,
     PaperStatus,
     PaperSummary,
     PaperUpdateRequest,
+    TagCreateRequest,
+    TagInfo,
+    TagUpdateRequest,
 )
 from backend.app.services.pdf_parser import extract_pdf_metadata
 
@@ -29,9 +33,9 @@ router = APIRouter(prefix="/papers", tags=["papers"])
 
 def _fallback_summary() -> PaperSummary:
     return PaperSummary(
-        problem="Awaiting OpenAI summary generation.",
-        method="Pending analysis.",
-        scenario="airborne SAR / high-resolution",
+        problem="等待分析流水线生成摘要。",
+        method="待分析。",
+        scenario="机载 SAR / 高分辨率",
         contributions=[],
         datasets_or_simulation=[],
         metrics=[],
@@ -68,6 +72,17 @@ def _paper_to_schema(paper: Paper) -> PaperDetail:
     )
 
 
+def _tag_to_schema(tag: PaperTag) -> TagInfo:
+    return TagInfo(
+        id=int(tag.id),
+        paper_id=int(tag.paper_id),
+        tag_name=tag.tag_name,
+        tag_category=tag.tag_category,
+        source=tag.source,
+        created_at=tag.created_at,
+    )
+
+
 def _create_processing_task(db: Session, paper_id: int, task_name: str, provider: str = "openai") -> None:
     db.add(
         ProcessingTask(
@@ -94,6 +109,36 @@ def _normalize_direction_hint(value: str | None) -> list[str]:
     if not value:
         return ["airborne-sar"]
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+@router.post("", response_model=PaperDetail)
+def create_paper(payload: PaperCreateRequest, db: Session = Depends(get_db)) -> PaperDetail:
+    if payload.doi:
+        existing = db.scalar(select(Paper).where(Paper.doi == payload.doi))
+        if existing:
+            raise HTTPException(status_code=409, detail="doi already exists")
+
+    paper = Paper(
+        title=payload.title,
+        abstract=payload.abstract,
+        year=payload.year,
+        venue=payload.venue,
+        doi=payload.doi,
+        source_url=payload.source_url,
+        status="metadata_ready",
+    )
+    db.add(paper)
+    db.flush()
+
+    for tag_name in payload.tags:
+        cleaned = tag_name.strip()
+        if cleaned:
+            db.add(PaperTag(paper_id=paper.id, tag_name=cleaned, tag_category="topic", source="manual"))
+
+    db.commit()
+    db.refresh(paper)
+    paper = db.scalar(select(Paper).options(selectinload(Paper.tags), selectinload(Paper.analysis)).where(Paper.id == paper.id))
+    return _paper_to_schema(paper)
 
 
 @router.post("/import/doi", response_model=dict)
@@ -212,11 +257,14 @@ def import_by_pdf(
 
 
 @router.get("", response_model=list[PaperDetail])
-def list_papers(db: Session = Depends(get_db)) -> list[PaperDetail]:
-    papers = db.scalars(
-        select(Paper).options(selectinload(Paper.tags), selectinload(Paper.analysis)).order_by(Paper.created_at.desc())
-    ).all()
-    return [_paper_to_schema(paper) for paper in papers]
+def list_papers(tag: str | None = Query(default=None), db: Session = Depends(get_db)) -> list[PaperDetail]:
+    stmt = select(Paper).options(selectinload(Paper.tags), selectinload(Paper.analysis)).order_by(Paper.created_at.desc())
+    if tag:
+        stmt = stmt.join(PaperTag).where(PaperTag.tag_name == tag)
+
+    papers = db.scalars(stmt).all()
+    dedup: dict[int, Paper] = {paper.id: paper for paper in papers}
+    return [_paper_to_schema(paper) for paper in dedup.values()]
 
 
 @router.get("/{paper_id}", response_model=PaperDetail)
@@ -258,6 +306,16 @@ def update_paper(paper_id: int, payload: PaperUpdateRequest, db: Session = Depen
     return _paper_to_schema(paper)
 
 
+@router.delete("/{paper_id}", response_model=dict)
+def delete_paper(paper_id: int, db: Session = Depends(get_db)) -> dict:
+    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+    db.delete(paper)
+    db.commit()
+    return {"message": "paper deleted", "paper_id": paper_id}
+
+
 @router.get("/{paper_id}/similar", response_model=list[dict])
 def similar_papers(paper_id: int, db: Session = Depends(get_db)) -> list[dict]:
     current = db.scalar(select(Paper).where(Paper.id == paper_id))
@@ -273,3 +331,53 @@ def similar_papers(paper_id: int, db: Session = Depends(get_db)) -> list[dict]:
         }
         for paper in other_papers
     ]
+
+
+@router.get("/paper-tags", response_model=list[TagInfo])
+def list_tags(db: Session = Depends(get_db)) -> list[TagInfo]:
+    tags = db.scalars(select(PaperTag).order_by(PaperTag.created_at.desc())).all()
+    return [_tag_to_schema(tag) for tag in tags]
+
+
+@router.post("/paper-tags", response_model=TagInfo)
+def create_tag(payload: TagCreateRequest, paper_id: int = Query(...), db: Session = Depends(get_db)) -> TagInfo:
+    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+
+    tag = PaperTag(
+        paper_id=paper_id,
+        tag_name=payload.tag_name.strip(),
+        tag_category=payload.tag_category.strip() or "topic",
+        source="manual",
+    )
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+    return _tag_to_schema(tag)
+
+
+@router.patch("/paper-tags/{tag_id}", response_model=TagInfo)
+def update_tag(tag_id: int, payload: TagUpdateRequest, db: Session = Depends(get_db)) -> TagInfo:
+    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
+    if not tag:
+        raise HTTPException(status_code=404, detail="tag not found")
+
+    if payload.tag_name is not None:
+        tag.tag_name = payload.tag_name.strip()
+    if payload.tag_category is not None:
+        tag.tag_category = payload.tag_category.strip() or "topic"
+
+    db.commit()
+    db.refresh(tag)
+    return _tag_to_schema(tag)
+
+
+@router.delete("/paper-tags/{tag_id}", response_model=dict)
+def delete_tag(tag_id: int, db: Session = Depends(get_db)) -> dict:
+    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
+    if not tag:
+        raise HTTPException(status_code=404, detail="tag not found")
+    db.delete(tag)
+    db.commit()
+    return {"message": "tag deleted", "tag_id": tag_id}

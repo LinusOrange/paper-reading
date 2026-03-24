@@ -21,24 +21,70 @@
         <header class="page-header">
           <div>
             <div class="eyebrow">Library</div>
-            <h2>论文库与 PDF 预览</h2>
-            <p>浏览论文元数据、结构化摘要，并在页面内直接预览已上传的 PDF。</p>
+            <h2>论文库与标签管理</h2>
+            <p>支持论文与标签的增删查改，并可按标签筛选论文。</p>
           </div>
           <div class="status-pill" id="health-status">正在检查服务…</div>
         </header>
+
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>标签筛选</h3></div>
+            <form id="paper-filter-form" class="search-form">
+              <label>按标签筛选
+                <select id="tag-filter" name="tag_filter">
+                  <option value="">全部标签</option>
+                </select>
+              </label>
+              <button type="submit">应用筛选</button>
+            </form>
+          </div>
+          <div>
+            <div class="panel-header"><h3>新增论文</h3></div>
+            <form id="paper-create-form" class="search-form">
+              <label>标题<input name="title" required /></label>
+              <label>年份<input name="year" type="number" value="2026" required /></label>
+              <label>期刊/会议<input name="venue" /></label>
+              <label>DOI<input name="doi" /></label>
+              <label>来源链接<input name="source_url" /></label>
+              <label>摘要<textarea name="abstract" rows="3"></textarea></label>
+              <label>标签（逗号分隔）<input name="tags" placeholder="机载SAR,高分辨率" /></label>
+              <button type="submit">创建论文</button>
+            </form>
+            <div id="paper-create-result" class="detail empty-state">这里显示创建结果。</div>
+          </div>
+        </section>
+
         <section class="panel split-layout-wide">
           <div>
             <div class="panel-header"><h3>文献列表</h3></div>
             <div id="paper-list" class="list"></div>
           </div>
           <div class="detail-column">
-            <div class="panel-header"><h3>文献详情</h3></div>
+            <div class="panel-header"><h3>文献详情（可更新/删除）</h3></div>
             <div id="paper-detail" class="detail empty-state">请选择论文查看详情。</div>
           </div>
           <div class="preview-column">
             <div class="panel-header"><h3>PDF 预览</h3></div>
             <div id="pdf-preview-empty" class="detail empty-state">当论文存在 PDF 时，这里会直接显示预览。</div>
             <div id="pdf-preview" class="pdf-preview-shell"></div>
+          </div>
+        </section>
+
+        <section class="panel split-search">
+          <div>
+            <div class="panel-header"><h3>标签列表（可编辑/删除）</h3></div>
+            <div id="tag-list" class="list compact"></div>
+          </div>
+          <div>
+            <div class="panel-header"><h3>新增标签</h3></div>
+            <form id="tag-create-form" class="search-form">
+              <label>论文 ID<input name="paper_id" type="number" required /></label>
+              <label>标签名称<input name="tag_name" placeholder="机载SAR" required /></label>
+              <label>标签分类<input name="tag_category" value="topic" /></label>
+              <button type="submit">创建标签</button>
+            </form>
+            <div id="tag-create-result" class="detail empty-state">这里显示标签创建结果。</div>
           </div>
         </section>
       </main>

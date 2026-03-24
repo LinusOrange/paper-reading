@@ -43,11 +43,11 @@ def run_pipeline_task(db: Session, task: ProcessingTask) -> None:
         quality_review = run_quality_review(paper, summary)
         if quality_review.get("revision_advice"):
             summary["limitations"] = _ensure_list(summary.get("limitations")) + [
-                f"Quality review advice: {'; '.join(quality_review['revision_advice'][:2])}"
+                f"质量审计建议：{'; '.join(quality_review['revision_advice'][:2])}"
             ]
 
         analysis.summary_json = summary
-        analysis.analysis_model = settings.openai_model if settings.openai_api_key else "pipeline-fallback"
+        analysis.analysis_model = settings.openai_model if settings.openai_api_key else "中文流水线回退"
         analysis.prompt_version = "pipeline-v2"
         paper.status = "analyzed"
         return
@@ -91,11 +91,11 @@ def build_full_text(paper: Paper) -> str:
                 title = metadata.get("title") or paper.title
                 venue = metadata.get("venue") or paper.venue or "unknown venue"
                 year = metadata.get("year") or paper.year or "unknown year"
-                return f"{title}\n\nImported from PDF for {venue} ({year})."
+                return f"{title}\n\n该文本来自已上传 PDF，来源：{venue}（{year}）。"
             except Exception:
                 pass
 
-    return f"{paper.title}\n\n{paper.abstract or 'No abstract was provided during import.'}"
+    return f"{paper.title}\n\n{paper.abstract or '导入时未提供摘要。'}"
 
 
 def generate_structured_summary(paper: Paper) -> dict:
@@ -125,9 +125,9 @@ def generate_entities(paper: Paper, summary: dict) -> dict:
         if parsed:
             methods = _ensure_list(parsed.get("methods"))
             keywords = _ensure_list(parsed.get("keywords"))
-            scenario = str(parsed.get("scenario") or summary.get("scenario") or "airborne SAR")
+            scenario = str(parsed.get("scenario") or summary.get("scenario") or "机载 SAR")
             return {
-                "methods": sorted(set(methods)) or ["metadata-derived"],
+                "methods": sorted(set(methods)) or ["基于元数据推断"],
                 "keywords": sorted(set(keywords)),
                 "scenario": scenario,
             }
@@ -135,19 +135,19 @@ def generate_entities(paper: Paper, summary: dict) -> dict:
     text = f"{paper.title} {paper.abstract or ''} {summary.get('method', '')}".lower()
     methods: list[str] = []
     if "motion" in text:
-        methods.append("motion-compensation")
+        methods.append("运动补偿")
     if "squint" in text:
-        methods.append("large-squint-imaging")
+        methods.append("大斜视成像")
     if "speed" in text:
-        methods.append("high-speed-imaging")
+        methods.append("高速成像")
     if "autofocus" in text:
-        methods.append("autofocus")
+        methods.append("自聚焦")
     if not methods:
-        methods.append("metadata-derived")
+        methods.append("基于元数据推断")
     return {
         "methods": sorted(set(methods)),
         "keywords": [tag.tag_name for tag in paper.tags],
-        "scenario": summary.get("scenario", "airborne SAR"),
+        "scenario": summary.get("scenario", "机载 SAR"),
     }
 
 
@@ -162,38 +162,38 @@ def run_quality_review(paper: Paper, summary: dict) -> dict:
 
 def ensure_recommended_tags(db: Session, paper: Paper, entities: dict, summary: dict) -> None:
     existing = {tag.tag_name for tag in paper.tags}
-    inferred = {"airborne-sar", "high-resolution"}
+    inferred = {"机载SAR", "高分辨率"}
 
     text = f"{paper.title} {paper.abstract or ''} {summary.get('scenario', '')} {' '.join(entities.get('methods', []))}".lower()
     if "squint" in text:
-        inferred.add("large-squint")
+        inferred.add("大斜视")
     if "speed" in text:
-        inferred.add("high-speed")
+        inferred.add("高速")
 
     for tag_name in sorted(inferred - existing):
         db.add(PaperTag(paper_id=paper.id, tag_name=tag_name, tag_category="topic", source="pipeline"))
 
 
 def fallback_summary(paper: Paper) -> dict:
-    scenario_parts = ["airborne SAR", "high-resolution"]
+    scenario_parts = ["机载 SAR", "high-resolution"]
     text = f"{paper.title} {paper.abstract or ''}".lower()
     if "squint" in text or paper.is_large_squint:
-        scenario_parts.append("large-squint")
+        scenario_parts.append("大斜视")
     if "speed" in text or paper.is_high_speed:
-        scenario_parts.append("high-speed")
+        scenario_parts.append("高速")
     return {
-        "problem": paper.abstract or "Imported paper awaiting deeper OpenAI reading.",
-        "method": "Pipeline fallback generated a structured summary from metadata and available text.",
+        "problem": paper.abstract or "该论文已导入，等待更深入的 AI 阅读分析。",
+        "method": "当上游模型不可用时，系统根据元数据与已有文本生成结构化摘要。",
         "scenario": " / ".join(scenario_parts),
         "contributions": [
-            "Generated structured summary through the built-in analysis pipeline.",
-            "Prepared data for QA and tag recommendation stages.",
+            "通过内置分析流水线生成了结构化摘要。",
+            "为问答与标签推荐阶段准备了可用结构化数据。",
         ],
-        "speed_related_issue": "Covers high-speed platform dynamics." if ("speed" in text or paper.is_high_speed) else None,
-        "squint_related_issue": "Covers large-squint imaging geometry." if ("squint" in text or paper.is_large_squint) else None,
+        "speed_related_issue": "关注高速平台运动带来的成像影响。" if ("speed" in text or paper.is_high_speed) else None,
+        "squint_related_issue": "关注大斜视成像几何带来的影响。" if ("squint" in text or paper.is_large_squint) else None,
         "datasets_or_simulation": [paper.venue] if paper.venue else [],
-        "metrics": ["pipeline-ready"],
-        "limitations": ["Fallback summary is metadata-driven when OpenAI output is unavailable."],
+        "metrics": ["流水线就绪"],
+        "limitations": ["当上游模型输出不可用时，摘要会退化为元数据驱动结果。"],
     }
 
 

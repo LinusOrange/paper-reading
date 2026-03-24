@@ -10,6 +10,7 @@ Strict requirements:
 3) If uncertain, set nullable fields to null and add uncertainty in limitations.
 4) Do not hallucinate datasets, metrics, or claims that are absent from evidence.
 5) Prefer concise, information-dense wording.
+6) All natural-language field values MUST be in Chinese.
 
 Output JSON schema:
 {
@@ -52,7 +53,7 @@ Output JSON schema:
 Normalization rules:
 - methods: canonical method labels (e.g., motion-compensation, autofocus, omega-k, chirp-scaling).
 - keywords: concise domain tags that help retrieval.
-- scenario: one short sentence summarizing the target deployment/geometry.
+- scenario: one short sentence summarizing the target deployment/geometry in Chinese.
 - Avoid duplicates and trivial terms (paper, method, algorithm).
 """.strip()
 
@@ -71,5 +72,6 @@ Given a paper text and candidate JSON summary, evaluate consistency and return J
 Rules:
 - Flag unsupported claims.
 - Keep review concise and actionable.
+- All output text MUST be in Chinese.
 - If evidence is insufficient, be explicit.
 """.strip()
