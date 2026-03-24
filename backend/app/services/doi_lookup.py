@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
+import urllib.request
 
 from backend.app.config import settings
 from backend.app.services.openai_provider import build_openai_client
@@ -30,12 +32,20 @@ Rules:
 
 
 def lookup_doi_metadata(doi: str) -> dict | None:
-    if not settings.openai_api_key or not settings.openai_enabled or not settings.openai_doi_web_search_enabled:
-        return None
+    if settings.openai_api_key and settings.openai_enabled and settings.openai_doi_web_search_enabled:
+        openai_result = _openai_lookup(doi)
+        if openai_result and openai_result.get("title"):
+            return openai_result
 
+    crossref_result = _crossref_lookup(doi)
+    if crossref_result and crossref_result.get("title"):
+        return crossref_result
+    return None
+
+
+def _openai_lookup(doi: str) -> dict | None:
     client = build_openai_client()
     user_prompt = f"Find metadata for DOI: {doi}"
-
     try:
         response = client.responses.create(
             model=settings.openai_model,
@@ -60,6 +70,53 @@ def lookup_doi_metadata(doi: str) -> dict | None:
             "venue": _clean_nullable_text(parsed.get("venue")),
             "abstract": _clean_nullable_text(parsed.get("abstract")),
             "source_url": _clean_nullable_text(parsed.get("source_url")),
+        }
+    except Exception:
+        return None
+
+
+def _crossref_lookup(doi: str) -> dict | None:
+    try:
+        encoded = urllib.parse.quote(doi, safe="")
+        request = urllib.request.Request(
+            url=f"https://api.crossref.org/works/{encoded}",
+            headers={"User-Agent": "sar-literature-demo/0.1 (metadata lookup)"},
+        )
+        with urllib.request.urlopen(request, timeout=12) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        message = payload.get("message", {}) if isinstance(payload, dict) else {}
+        titles = message.get("title") or []
+        title = str(titles[0]).strip() if titles else None
+
+        container = message.get("container-title") or []
+        venue = str(container[0]).strip() if container else None
+
+        year = None
+        issued = message.get("issued", {})
+        date_parts = issued.get("date-parts") if isinstance(issued, dict) else None
+        if isinstance(date_parts, list) and date_parts and isinstance(date_parts[0], list) and date_parts[0]:
+            year = _parse_year(date_parts[0][0])
+
+        authors: list[str] = []
+        for author in message.get("author", []) if isinstance(message.get("author"), list) else []:
+            given = str(author.get("given") or "").strip()
+            family = str(author.get("family") or "").strip()
+            full_name = " ".join(item for item in [given, family] if item).strip()
+            if full_name:
+                authors.append(full_name)
+
+        abstract = _strip_tags(str(message.get("abstract") or "").strip()) or None
+        doi_url = f"https://doi.org/{doi}"
+        source_url = _clean_nullable_text(message.get("URL")) or doi_url
+
+        return {
+            "title": title,
+            "authors": authors,
+            "year": year,
+            "venue": venue,
+            "abstract": abstract,
+            "source_url": source_url,
         }
     except Exception:
         return None
@@ -119,3 +176,9 @@ def _clean_nullable_text(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _strip_tags(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r"<[^>]+>", " ", text).strip()

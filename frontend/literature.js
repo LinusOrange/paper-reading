@@ -40,8 +40,14 @@ async function runWorkflow(event) {
 
   showBlock(workflowStatus, '执行中', '正在调用 Codex：1) 生成新提示词 2) 文献联网检索...');
 
+  const workflowEndpoint = endpoints.literatureWorkflow || '/api/analysis/literature-workflow';
+  if (!workflowEndpoint) {
+    showBlock(workflowStatus, '执行失败', '文献工作流接口未配置（endpoints.literatureWorkflow）。', true);
+    return;
+  }
+
   try {
-    const result = await apiFetch(endpoints.literatureWorkflow, {
+    const result = await apiFetch(workflowEndpoint, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
