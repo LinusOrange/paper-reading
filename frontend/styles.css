@@ -318,6 +318,15 @@ button:hover { filter: brightness(1.03); }
   place-items: center;
   text-align: center;
 }
+.error-state {
+  border-color: rgba(217, 74, 98, 0.35);
+  background: rgba(255, 244, 246, 0.95);
+}
+.error-state h4,
+.error-state strong {
+  color: var(--danger);
+}
+
 .detail h4,
 .detail h3 { margin-top: 0; }
 .detail ul { padding-left: 20px; }
