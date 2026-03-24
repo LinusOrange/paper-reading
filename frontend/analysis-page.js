@@ -39,7 +39,7 @@ function renderActiveTask(tasks) {
     return;
   }
 
-  const stateLabel = runningTask ? '当前正在处理' : '当前没有真正运行中的 worker；最近排队任务如下';
+  const stateLabel = runningTask ? '当前正在处理' : '当前暂时没有运行中的任务；最近排队任务如下';
   activeTask.innerHTML = `
     <div class="hero-card soft-accent">
       <div class="eyebrow">${stateLabel}</div>
@@ -71,6 +71,7 @@ function renderTasks(tasks) {
             <span>创建：${formatDateTime(task.created_at)}</span>
             <span>更新：${formatDateTime(task.updated_at || task.created_at)}</span>
           </div>
+          ${task.error_message ? `<p class="muted-text">错误：${task.error_message}</p>` : ''}
         </article>
       `,
     )

@@ -25,6 +25,7 @@ def list_tasks(db: Session = Depends(get_db)) -> list[TaskInfo]:
             paper_title=task.paper.title if task.paper else None,
             state=task.state,
             provider=task.provider,
+            error_message=task.error_message,
             created_at=task.created_at,
             updated_at=task.updated_at,
         )

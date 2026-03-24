@@ -113,6 +113,7 @@ class TaskInfo(BaseModel):
     paper_title: str | None = None
     state: str
     provider: str | None = None
+    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -13,6 +13,8 @@ cp .env.example .env
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`
 - `OPENAI_MODEL`
+- `TASK_WORKER_ENABLED`（默认 `true`）
+- `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3` 秒）
 
 最后启动：
 
@@ -43,6 +45,8 @@ docker compose up --build
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`（默认 `https://once.novai.su/v1`）
 - `OPENAI_MODEL`（默认 `gpt-5.4`）
+- `TASK_WORKER_ENABLED`（默认 `true`）
+- `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3`）
 
 出于安全考虑，我没有把 API key 直接写进仓库文件，请通过环境变量传入。
 
@@ -72,11 +76,13 @@ curl http://localhost:8000/healthz
 - `openai_model`：当前实际使用的模型
 - `openai_key_hint`：已加载 key 的脱敏提示
 - `env_file_path` / `env_file_exists`：后端识别到的 `.env` 路径和存在状态
+- `task_worker_enabled` / `task_worker_running`：内置任务 worker 是否启用、是否已经启动
+- `task_worker_poll_interval_seconds`：worker 当前轮询间隔
 
 如果你走的是 Docker Compose，还可以进入容器再次确认：
 
 ```bash
-docker compose exec backend python -c "from backend.app.config import settings; print({'configured': bool(settings.openai_api_key), 'base_url': settings.openai_base_url, 'model': settings.openai_model, 'env_file_path': settings.env_file_path, 'env_file_exists': settings.env_file_exists})"
+docker compose exec backend python -c "from backend.app.config import settings; print({'configured': bool(settings.openai_api_key), 'base_url': settings.openai_base_url, 'model': settings.openai_model, 'env_file_path': settings.env_file_path, 'env_file_exists': settings.env_file_exists, 'worker_enabled': settings.task_worker_enabled, 'worker_poll_interval_seconds': settings.task_worker_poll_interval_seconds})"
 ```
 
 ## 本轮新增能力

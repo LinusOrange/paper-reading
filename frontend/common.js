@@ -25,8 +25,9 @@ export async function apiFetch(url, options = {}) {
 
 function renderHealthSummary(health) {
   const serviceStatus = health.status === 'ok' ? '后端正常' : health.status;
+  const workerStatus = health.task_worker_running ? 'worker 运行中' : (health.task_worker_enabled ? 'worker 未运行' : 'worker 已禁用');
   const openaiStatus = health.analysis_available
-    ? `OpenAI 分析已启用 · ${health.openai_base_url}`
+    ? `OpenAI 分析已启用 · ${health.openai_base_url} · ${workerStatus}`
     : (health.status_message || '未配置 OpenAI Key（导入/浏览可用，分析/问答暂不可用）');
 
   return `
