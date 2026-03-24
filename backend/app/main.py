@@ -1,7 +1,8 @@
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.admin import router as admin_router
@@ -12,6 +13,7 @@ from backend.app.bootstrap import ensure_demo_data
 from backend.app.config import settings
 from backend.app.db import SessionLocal, engine
 from backend.app.models import Base
+from backend.app.services.openai_provider import build_openai_client
 from backend.app.services.task_worker import TaskWorker
 
 
@@ -73,6 +75,43 @@ def healthcheck() -> dict:
         if analysis_available and worker_running
         else "当前 OpenAI 已配置，但内置 worker 尚未运行。" if analysis_available
         else "当前还没有配置 OPENAI_API_KEY。论文导入、浏览和检索仍可正常使用，但分析与问答功能会保持不可用。",
+    }
+
+
+@app.get("/healthz/openai", tags=["system"])
+def check_openai_api() -> dict:
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=400, detail="OPENAI_API_KEY is not configured")
+
+    started_at = time.perf_counter()
+    client = build_openai_client()
+
+    try:
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[
+                {"role": "system", "content": "Return exactly: pong"},
+                {"role": "user", "content": "ping"},
+            ],
+            max_tokens=8,
+            temperature=0,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"OpenAI API check failed: {exc}") from exc
+
+    elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
+    answer = ""
+    if response.choices:
+        answer = (response.choices[0].message.content or "").strip()
+
+    return {
+        "status": "ok",
+        "provider": "openai",
+        "base_url": settings.openai_base_url,
+        "model": settings.openai_model,
+        "latency_ms": elapsed_ms,
+        "response_preview": answer[:120],
+        "usage": response.usage.model_dump() if response.usage else None,
     }
 
 

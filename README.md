@@ -30,6 +30,7 @@ docker compose up --build
 - 分析与问答：http://localhost:3000/analysis.html
 - 后端：http://localhost:8000
 - 健康检查：http://localhost:8000/healthz
+- OpenAI 连通性检查：http://localhost:8000/healthz/openai
 
 ## 当前组成
 
@@ -61,6 +62,17 @@ docker compose up --build
 如果右上角状态提示显示“未配置 OpenAI Key（导入/浏览可用，分析/问答暂不可用）”，这是**正常现象**：表示后端在线，但当前环境还没有设置 `OPENAI_API_KEY`。这时论文导入、浏览、检索仍可使用，只有依赖 OpenAI 的分析与问答功能会被禁用。
 
 ## 如何检查 OpenAI 配置是否真的生效
+
+
+## OpenAI API 直连检测（8000 端口）
+
+如需单独验证 OpenAI API 调用是否可用，可执行：
+
+```bash
+curl http://localhost:8000/healthz/openai
+```
+
+返回 `status=ok` 表示后端已经成功完成一次真实的 OpenAI 调用；如果失败会返回 `502` 并附带错误详情。
 
 你可以直接检查 `8000` 端口上的健康检查接口：
 
