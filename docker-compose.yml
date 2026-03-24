@@ -24,8 +24,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://sar_demo:sar_demo@postgres:5432/sar_demo
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://once.novai.su/v1}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://us.novaiapi.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-[次]gemini-3-pro-preview}
       UPLOAD_DIR: /app/data/uploads
     ports:
       - "8000:8000"

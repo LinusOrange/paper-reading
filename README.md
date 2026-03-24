@@ -11,8 +11,8 @@ cp .env.example .env
 然后按需修改里面的：
 
 - `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`
-- `OPENAI_MODEL`
+- `OPENAI_BASE_URL`（例如 `https://us.novaiapi.com/v1`）
+- `OPENAI_MODEL`（例如 `[次]gemini-3-pro-preview`）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3` 秒）
 
@@ -44,8 +44,8 @@ docker compose up --build
 当前仓库已支持以下运行参数：
 
 - `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`（默认 `https://once.novai.su/v1`）
-- `OPENAI_MODEL`（默认 `gpt-5.4`）
+- `OPENAI_BASE_URL`（默认 `https://us.novaiapi.com/v1`）
+- `OPENAI_MODEL`（默认 `[次]gemini-3-pro-preview`）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3`）
 
@@ -63,6 +63,23 @@ docker compose up --build
 
 ## 如何检查 OpenAI 配置是否真的生效
 
+
+
+### 我们当前的 OpenAI 调用方式是否匹配你提供的示例
+
+是的，后端当前就是这种 OpenAI SDK 调用方式：
+
+- `from openai import OpenAI`
+- `OpenAI(api_key=..., base_url=...)`
+- `client.chat.completions.create(model=..., messages=...)`
+
+你给出的 `base_url=https://us.novaiapi.com/v1` 与 `model=[次]gemini-3-pro-preview` 已经作为默认值写入配置（仍可通过环境变量覆盖）。
+
+另外，仓库中新增了自定义 Provider 的示例配置文件：
+
+- `configs/model-providers.example.json`
+
+该文件内已经包含你要求的 `models.providers.claude` 代码片段，可直接复制到你的模型网关/前端工具配置中。
 
 ## OpenAI API 直连检测（8000 端口）
 
