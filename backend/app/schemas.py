@@ -44,6 +44,7 @@ class PaperSummary(BaseModel):
 
 class PaperDetail(PaperBase):
     id: int
+    library_index: int | None = None
     status: PaperStatus = PaperStatus.new
     tags: list[str] = Field(default_factory=list)
     pdf_object_key: str | None = None

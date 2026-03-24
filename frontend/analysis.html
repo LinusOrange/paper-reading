@@ -35,8 +35,21 @@
           <div>
             <div class="panel-header"><h3>OpenAI 分析任务入口</h3></div>
             <form id="analysis-form" class="search-form">
-              <label>paper_id<input id="analysis-paper-id" name="paper_id" type="number" value="1" /></label>
-              <label>任务列表（逗号分隔）<input name="task_types" type="text" value="generate_summary,extract_entities,recommend_tags" /></label>
+              <label>搜索论文标题
+                <input id="analysis-paper-search" name="paper_search" type="text" placeholder="输入关键词筛选论文标题" />
+              </label>
+              <label>选择论文标题
+                <select id="analysis-paper-select" name="paper_id"></select>
+              </label>
+              <label>任务列表（可多选）
+                <select id="analysis-task-types" name="task_types" multiple size="4">
+                  <option value="extract_text">extract_text</option>
+                  <option value="generate_summary" selected>generate_summary</option>
+                  <option value="extract_entities" selected>extract_entities</option>
+                  <option value="recommend_tags" selected>recommend_tags</option>
+                  <option value="build_embeddings">build_embeddings</option>
+                </select>
+              </label>
               <button type="submit">创建 OpenAI 分析任务</button>
             </form>
           </div>

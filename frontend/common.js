@@ -95,6 +95,7 @@ export function renderPaperCard(paper) {
             <input type="checkbox" class="paper-select-checkbox" data-paper-select="${paper.id}" aria-label="选择论文 ${paper.id}" />
             <span>已选</span>
           </label>
+          <div class="eyebrow" style="margin-bottom:4px;">P-${paper.library_index ?? '-'}</div>
           <h4>${paper.title}</h4>
           <small>${paper.year} · ${paper.venue || 'Unknown venue'}</small>
         </div>

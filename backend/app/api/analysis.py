@@ -107,6 +107,7 @@ def literature_workflow(payload: LiteratureWorkflowRequest, db: Session = Depend
 def _store_literature_candidates(db: Session, papers: list[dict]) -> dict:
     created_ids: list[int] = []
     skipped_titles: list[str] = []
+    queued_tasks = 0
 
     for item in papers:
         if not isinstance(item, dict):
@@ -146,5 +147,14 @@ def _store_literature_candidates(db: Session, papers: list[dict]) -> dict:
             if cleaned:
                 db.add(PaperTag(paper_id=paper.id, tag_name=cleaned, tag_category="topic", source="literature_workflow"))
 
+        for task_name in ["generate_summary", "extract_entities", "recommend_tags"]:
+            _create_processing_task(db, paper.id, task_name, provider="openai")
+            queued_tasks += 1
+
     db.commit()
-    return {"created_count": len(created_ids), "created_ids": created_ids, "skipped_titles": skipped_titles}
+    return {
+        "created_count": len(created_ids),
+        "created_ids": created_ids,
+        "skipped_titles": skipped_titles,
+        "queued_tasks": queued_tasks,
+    }

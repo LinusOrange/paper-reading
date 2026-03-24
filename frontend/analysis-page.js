@@ -6,6 +6,11 @@ const analysisResponse = document.getElementById('analysis-response');
 const qaAnswer = document.getElementById('qa-answer');
 const taskSummary = document.getElementById('task-summary');
 const activeTask = document.getElementById('active-task');
+const paperSearchInput = document.getElementById('analysis-paper-search');
+const paperSelect = document.getElementById('analysis-paper-select');
+const taskTypesSelect = document.getElementById('analysis-task-types');
+
+let allPapers = [];
 
 function summarizeTasks(tasks) {
   const summary = { total: tasks.length, queued: 0, running: 0, completed: 0, failed: 0 };
@@ -87,9 +92,18 @@ async function loadTasks() {
 
 async function runAnalysisQueue(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  const paperId = formData.get('paper_id');
-  const taskTypes = String(formData.get('task_types')).split(',').map((item) => item.trim()).filter(Boolean);
+  const paperId = Number(paperSelect.value);
+  const taskTypes = Array.from(taskTypesSelect.selectedOptions).map((option) => option.value).filter(Boolean);
+  if (!paperId) {
+    analysisResponse.classList.remove('empty-state');
+    analysisResponse.textContent = '请先选择论文标题。';
+    return;
+  }
+  if (!taskTypes.length) {
+    analysisResponse.classList.remove('empty-state');
+    analysisResponse.textContent = '请至少选择一个任务。';
+    return;
+  }
   const result = await apiFetch(endpoints.enqueueAnalysis(paperId), {
     method: 'POST',
     body: JSON.stringify({ task_types: taskTypes, provider: 'openai' }),
@@ -109,6 +123,22 @@ async function runAnalysisQueue(event) {
     </div>
   `;
   await loadTasks();
+}
+
+function renderPaperSelect(keyword = '') {
+  const query = keyword.trim().toLowerCase();
+  const papers = query
+    ? allPapers.filter((paper) => String(paper.title || '').toLowerCase().includes(query))
+    : allPapers;
+
+  paperSelect.innerHTML = papers
+    .map((paper) => `<option value="${paper.id}">P-${paper.library_index ?? '-'} · ${paper.title}</option>`)
+    .join('');
+}
+
+async function loadPapersForAnalysis() {
+  allPapers = await apiFetch(endpoints.papers);
+  renderPaperSelect();
 }
 
 async function runQa(event) {
@@ -132,6 +162,7 @@ async function runQa(event) {
 async function loadPage() {
   renderSidebar('analysis');
   await loadHealthStatus(healthStatus);
+  await loadPapersForAnalysis();
   await loadTasks();
   window.clearInterval(window.__sarTaskPoller);
   window.__sarTaskPoller = window.setInterval(() => {
@@ -140,6 +171,9 @@ async function loadPage() {
 }
 
 document.getElementById('analysis-form').addEventListener('submit', runAnalysisQueue);
+paperSearchInput.addEventListener('input', () => {
+  renderPaperSelect(paperSearchInput.value);
+});
 document.getElementById('qa-form').addEventListener('submit', runQa);
 loadPage().catch((error) => {
   healthStatus.textContent = `服务不可用：${error.message}`;

@@ -113,7 +113,7 @@ function showPaperDetail(paper) {
       <div>
         <div class="eyebrow">论文详情</div>
         <h3>${paper.title}</h3>
-        <p class="muted-text">${paper.venue || '未知来源'} · ${paper.year} · 更新于 ${formatDateTime(paper.updated_at)}</p>
+        <p class="muted-text">编号 P-${paper.library_index ?? '-'} · ${paper.venue || '未知来源'} · ${paper.year} · 更新于 ${formatDateTime(paper.updated_at)}</p>
       </div>
       <div class="meta-grid">
         <div class="meta-card"><span>状态</span><strong>${paper.status}</strong></div>

@@ -52,12 +52,13 @@ def _resolve_pdf_path(paper: Paper) -> Path | None:
     return path if path.exists() else None
 
 
-def _paper_to_schema(paper: Paper) -> PaperDetail:
+def _paper_to_schema(paper: Paper, library_index: int | None = None) -> PaperDetail:
     summary_json = paper.analysis.summary_json if paper.analysis else None
     summary = PaperSummary(**summary_json) if summary_json else _fallback_summary()
     pdf_path = _resolve_pdf_path(paper)
     return PaperDetail(
         id=paper.id,
+        library_index=library_index,
         title=paper.title,
         year=paper.year or datetime.now(timezone.utc).year,
         venue=paper.venue,
@@ -285,7 +286,7 @@ def list_papers(tag: str | None = Query(default=None), db: Session = Depends(get
 
     papers = db.scalars(stmt).all()
     dedup: dict[int, Paper] = {paper.id: paper for paper in papers}
-    return [_paper_to_schema(paper) for paper in dedup.values()]
+    return [_paper_to_schema(paper, library_index=index + 1) for index, paper in enumerate(dedup.values())]
 
 
 @router.get("/paper-tags", response_model=list[TagInfo])
@@ -345,7 +346,9 @@ def get_paper(paper_id: int, db: Session = Depends(get_db)) -> PaperDetail:
     )
     if not paper:
         raise HTTPException(status_code=404, detail="paper not found")
-    return _paper_to_schema(paper)
+    ordered_ids = db.scalars(select(Paper.id).order_by(Paper.created_at.desc())).all()
+    library_index = next((i + 1 for i, pid in enumerate(ordered_ids) if pid == paper_id), None)
+    return _paper_to_schema(paper, library_index=library_index)
 
 
 @router.get("/{paper_id}/pdf")

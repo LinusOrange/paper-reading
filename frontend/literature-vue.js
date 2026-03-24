@@ -63,7 +63,8 @@ createApp({
           body: JSON.stringify(payload),
         });
         const stored = result.stored?.created_count ?? 0;
-        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'} · 外部检索回退：${result.used_external_fallback ? '是(OpenAlex)' : '否'} · 入库新增：${stored}`;
+        const queuedTasks = result.stored?.queued_tasks ?? 0;
+        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'} · 外部检索回退：${result.used_external_fallback ? '是(OpenAlex)' : '否'} · 入库新增：${stored} · 自动排队任务：${queuedTasks}`;
         this.optimizedPrompt = result.optimized_prompt || '未生成。';
         this.searchResult = this.prettyResult(result.search_result);
       } catch (error) {
