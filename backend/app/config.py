@@ -26,6 +26,9 @@ class Settings(BaseModel):
     openai_base_url: str = Field(default_factory=lambda: os.getenv("OPENAI_BASE_URL", "https://us.novaiapi.com/v1"))
     openai_model: str = Field(default_factory=lambda: os.getenv("OPENAI_MODEL", "[次]gemini-3-pro-preview"))
     openai_forward_pdf_source: bool = Field(default_factory=lambda: os.getenv("OPENAI_FORWARD_PDF_SOURCE", "true").lower() in {"1", "true", "yes", "on"})
+    openai_doi_web_search_enabled: bool = Field(
+        default_factory=lambda: os.getenv("OPENAI_DOI_WEB_SEARCH_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+    )
     upload_dir: str = Field(default_factory=lambda: os.getenv("UPLOAD_DIR", "/app/data/uploads"))
     task_worker_enabled: bool = Field(default_factory=lambda: os.getenv("TASK_WORKER_ENABLED", "true").lower() in {"1", "true", "yes", "on"})
     task_worker_poll_interval_seconds: float = Field(default_factory=lambda: float(os.getenv("TASK_WORKER_POLL_INTERVAL_SECONDS", "3")))

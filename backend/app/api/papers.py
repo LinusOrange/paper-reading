@@ -26,6 +26,7 @@ from backend.app.schemas import (
     TagInfo,
     TagUpdateRequest,
 )
+from backend.app.services.doi_lookup import lookup_doi_metadata
 from backend.app.services.pdf_parser import extract_pdf_metadata
 
 router = APIRouter(prefix="/papers", tags=["papers"])
@@ -147,12 +148,14 @@ def import_by_doi(payload: ImportDOIRequest, db: Session = Depends(get_db)) -> d
     if paper:
         return {"message": "DOI already exists", "paper_id": paper.id, "doi": paper.doi}
 
+    metadata = lookup_doi_metadata(payload.doi) or {}
     paper = Paper(
-        title=f"Imported DOI {payload.doi}",
-        abstract="Imported from DOI request.",
-        year=datetime.now(timezone.utc).year,
+        title=metadata.get("title") or f"Imported DOI {payload.doi}",
+        abstract=metadata.get("abstract") or "Imported from DOI request.",
+        year=metadata.get("year") or datetime.now(timezone.utc).year,
+        venue=metadata.get("venue"),
         doi=payload.doi,
-        source_url=f"https://doi.org/{payload.doi}",
+        source_url=metadata.get("source_url") or f"https://doi.org/{payload.doi}",
         status="metadata_ready",
     )
     db.add(paper)

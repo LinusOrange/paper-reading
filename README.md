@@ -14,6 +14,7 @@ cp .env.example .env
 - `OPENAI_BASE_URL`（例如 `https://us.novaiapi.com/v1`）
 - `OPENAI_MODEL`（例如 `[次]gemini-3-pro-preview`）
 - `OPENAI_FORWARD_PDF_SOURCE`（默认 `true`）
+- `OPENAI_DOI_WEB_SEARCH_ENABLED`（默认 `true`，启用 DOI 联网元数据检索）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3` 秒）
 
@@ -48,6 +49,7 @@ docker compose up --build
 - `OPENAI_BASE_URL`（默认 `https://us.novaiapi.com/v1`）
 - `OPENAI_MODEL`（默认 `[次]gemini-3-pro-preview`）
 - `OPENAI_FORWARD_PDF_SOURCE`（默认 `true`）
+- `OPENAI_DOI_WEB_SEARCH_ENABLED`（默认 `true`）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3`）
 
@@ -74,6 +76,7 @@ docker compose up --build
 - `from openai import OpenAI`
 - `OpenAI(api_key=..., base_url=...)`
 - `client.chat.completions.create(model=..., messages=...)`
+- `client.responses.create(..., tools=[{"type":"web_search"}])`（用于 DOI 联网检索元数据）
 
 你给出的 `base_url=https://us.novaiapi.com/v1` 与 `model=[次]gemini-3-pro-preview` 已经作为默认值写入配置（仍可通过环境变量覆盖）。
 
