@@ -13,6 +13,7 @@ cp .env.example .env
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`（例如 `https://us.novaiapi.com/v1`）
 - `OPENAI_MODEL`（例如 `[次]gemini-3-pro-preview`）
+- `OPENAI_FORWARD_PDF_SOURCE`（默认 `true`）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3` 秒）
 
@@ -46,6 +47,7 @@ docker compose up --build
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`（默认 `https://us.novaiapi.com/v1`）
 - `OPENAI_MODEL`（默认 `[次]gemini-3-pro-preview`）
+- `OPENAI_FORWARD_PDF_SOURCE`（默认 `true`）
 - `TASK_WORKER_ENABLED`（默认 `true`）
 - `TASK_WORKER_POLL_INTERVAL_SECONDS`（默认 `3`）
 
@@ -170,6 +172,27 @@ docker compose up --build -d
 
 
 ## 论文分析流水线（正式版起步）
+
+
+### 分析提示词设计（多阶段）
+
+为避免“单轮提示词”不稳定，当前流水线拆成 3 组提示词：
+
+1. **结构化摘要提示词**（`SUMMARY_PROMPT`）
+   - 强制输出 JSON（problem/method/scenario/contributions/...）
+   - 强约束“不要幻觉”，不确定内容写入 limitations
+
+2. **实体抽取提示词**（`ENTITIES_PROMPT`）
+   - 归一化 methods/keywords/scenario
+   - 方便后续检索和 QA 引用
+
+3. **质量审计提示词**（`QUALITY_REVIEW_PROMPT`）
+   - 对候选摘要做一致性审查
+   - 返回 missing_evidence / suspicious_claims / revision_advice
+
+提示词定义位置：`backend/app/services/prompt_templates.py`。
+
+流水线会尝试通过 OpenAI 的 API 发送完整分析载荷，并在可用时调用 `responses` 接口；若 Provider 不支持该能力，会自动回退到 `chat.completions`。
 
 当前 worker 已不再是纯占位符，处理 `processing_tasks` 时按任务类型执行固定流水线：
 

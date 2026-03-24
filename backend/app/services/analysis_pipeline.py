@@ -9,6 +9,7 @@ from backend.app.config import settings
 from backend.app.models import Paper, PaperAnalysis, PaperTag, ProcessingTask
 from backend.app.services.openai_provider import build_openai_client
 from backend.app.services.pdf_parser import extract_pdf_metadata
+from backend.app.services.prompt_templates import ENTITIES_PROMPT, QUALITY_REVIEW_PROMPT, SUMMARY_PROMPT
 
 
 SUMMARY_KEYS = {
@@ -38,9 +39,16 @@ def run_pipeline_task(db: Session, task: ProcessingTask) -> None:
         return
 
     if task.task_name == "generate_summary":
-        analysis.summary_json = generate_structured_summary(paper)
+        summary = generate_structured_summary(paper)
+        quality_review = run_quality_review(paper, summary)
+        if quality_review.get("revision_advice"):
+            summary["limitations"] = _ensure_list(summary.get("limitations")) + [
+                f"Quality review advice: {'; '.join(quality_review['revision_advice'][:2])}"
+            ]
+
+        analysis.summary_json = summary
         analysis.analysis_model = settings.openai_model if settings.openai_api_key else "pipeline-fallback"
-        analysis.prompt_version = "pipeline-v1"
+        analysis.prompt_version = "pipeline-v2"
         paper.status = "analyzed"
         return
 
@@ -95,39 +103,35 @@ def generate_structured_summary(paper: Paper) -> dict:
     if not settings.openai_api_key:
         return base
 
-    content = (paper.full_text or paper.abstract or paper.title)[:12000]
-    try:
-        client = build_openai_client()
-        response = client.chat.completions.create(
-            model=settings.openai_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a SAR literature analyst. Return JSON only with keys: problem, method, scenario, contributions, speed_related_issue, squint_related_issue, datasets_or_simulation, metrics, limitations.",
-                },
-                {
-                    "role": "user",
-                    "content": f"Paper title: {paper.title}\n\nPaper content:\n{content}",
-                },
-            ],
-            temperature=0,
-            max_tokens=1000,
-        )
-        raw = (response.choices[0].message.content or "").strip() if response.choices else ""
-        parsed = _safe_parse_json(raw)
-        if not parsed:
-            return base
-        merged = {**base, **{k: v for k, v in parsed.items() if k in SUMMARY_KEYS}}
-        merged["contributions"] = _ensure_list(merged.get("contributions"))
-        merged["datasets_or_simulation"] = _ensure_list(merged.get("datasets_or_simulation"))
-        merged["metrics"] = _ensure_list(merged.get("metrics"))
-        merged["limitations"] = _ensure_list(merged.get("limitations"))
-        return merged
-    except Exception:
+    payload = _build_analysis_payload(paper)
+    parsed = _openai_json_call(system_prompt=SUMMARY_PROMPT, user_payload=payload)
+    if not parsed:
         return base
+
+    merged = {**base, **{k: v for k, v in parsed.items() if k in SUMMARY_KEYS}}
+    merged["contributions"] = _ensure_list(merged.get("contributions"))
+    merged["datasets_or_simulation"] = _ensure_list(merged.get("datasets_or_simulation"))
+    merged["metrics"] = _ensure_list(merged.get("metrics"))
+    merged["limitations"] = _ensure_list(merged.get("limitations"))
+    return merged
 
 
 def generate_entities(paper: Paper, summary: dict) -> dict:
+    payload = _build_analysis_payload(paper)
+    payload += "\n\nSummary JSON:\n" + json.dumps(summary, ensure_ascii=False)
+
+    if settings.openai_api_key:
+        parsed = _openai_json_call(system_prompt=ENTITIES_PROMPT, user_payload=payload)
+        if parsed:
+            methods = _ensure_list(parsed.get("methods"))
+            keywords = _ensure_list(parsed.get("keywords"))
+            scenario = str(parsed.get("scenario") or summary.get("scenario") or "airborne SAR")
+            return {
+                "methods": sorted(set(methods)) or ["metadata-derived"],
+                "keywords": sorted(set(keywords)),
+                "scenario": scenario,
+            }
+
     text = f"{paper.title} {paper.abstract or ''} {summary.get('method', '')}".lower()
     methods: list[str] = []
     if "motion" in text:
@@ -145,6 +149,15 @@ def generate_entities(paper: Paper, summary: dict) -> dict:
         "keywords": [tag.tag_name for tag in paper.tags],
         "scenario": summary.get("scenario", "airborne SAR"),
     }
+
+
+def run_quality_review(paper: Paper, summary: dict) -> dict:
+    if not settings.openai_api_key:
+        return {}
+
+    payload = _build_analysis_payload(paper)
+    payload += "\n\nCandidate summary JSON:\n" + json.dumps(summary, ensure_ascii=False)
+    return _openai_json_call(system_prompt=QUALITY_REVIEW_PROMPT, user_payload=payload)
 
 
 def ensure_recommended_tags(db: Session, paper: Paper, entities: dict, summary: dict) -> None:
@@ -182,6 +195,66 @@ def fallback_summary(paper: Paper) -> dict:
         "metrics": ["pipeline-ready"],
         "limitations": ["Fallback summary is metadata-driven when OpenAI output is unavailable."],
     }
+
+
+def _build_analysis_payload(paper: Paper) -> str:
+    payload_parts = [
+        f"Paper title: {paper.title}",
+        f"Paper year: {paper.year}",
+        f"Paper venue: {paper.venue}",
+        f"Paper DOI: {paper.doi}",
+        "\nPaper text:\n" + (paper.full_text or paper.abstract or paper.title)[:16000],
+    ]
+
+    if settings.openai_forward_pdf_source and paper.pdf_object_key:
+        pdf_path = Path(paper.pdf_object_key)
+        if pdf_path.exists():
+            payload_parts.append(f"\nPDF source file path (uploaded on server): {pdf_path.name}")
+
+    return "\n".join([part for part in payload_parts if part])
+
+
+def _openai_json_call(system_prompt: str, user_payload: str) -> dict:
+    try:
+        client = build_openai_client()
+
+        if settings.openai_forward_pdf_source:
+            # Some OpenAI-compatible providers support `responses` and file input; if unavailable, fallback to chat.
+            try:
+                response = client.responses.create(
+                    model=settings.openai_model,
+                    input=[
+                        {
+                            "role": "system",
+                            "content": [{"type": "input_text", "text": system_prompt}],
+                        },
+                        {
+                            "role": "user",
+                            "content": [{"type": "input_text", "text": user_payload}],
+                        },
+                    ],
+                    max_output_tokens=1200,
+                )
+                raw = getattr(response, "output_text", "") or ""
+                parsed = _safe_parse_json(raw.strip())
+                if parsed:
+                    return parsed
+            except Exception:
+                pass
+
+        completion = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_payload},
+            ],
+            temperature=0,
+            max_tokens=1200,
+        )
+        raw = (completion.choices[0].message.content or "").strip() if completion.choices else ""
+        return _safe_parse_json(raw)
+    except Exception:
+        return {}
 
 
 def _ensure_list(value: object) -> list[str]:
