@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import urllib.parse
+import urllib.request
+
 from backend.app.config import settings
 from backend.app.services.openai_provider import build_openai_client
 
@@ -37,12 +41,23 @@ def run_literature_workflow(user_requirement: str, prompt_template: str | None =
     if not optimized_prompt:
         optimized_prompt = template.replace("{USER_REQUIREMENT}", user_requirement.strip())
 
+    used_fallback = False
     search_result = _search_with_prompt(client, optimized_prompt, use_web_search)
+    if _looks_like_offline_result(search_result):
+        fallback_result = _openalex_fallback_search(user_requirement or optimized_prompt)
+        if fallback_result:
+            used_fallback = True
+            search_result = (
+                "模型端 web_search 未返回可用联网结果，已自动回退到 OpenAlex 在线检索。\n\n"
+                f"{fallback_result}"
+            )
+
     return {
         "optimized_prompt": optimized_prompt,
         "search_result": search_result,
         "model": settings.openai_model,
         "used_web_search": bool(use_web_search),
+        "used_external_fallback": used_fallback,
     }
 
 
@@ -102,3 +117,78 @@ def _search_with_prompt(client, optimized_prompt: str, use_web_search: bool) -> 
         return (getattr(response, "output_text", "") or "").strip() or "未返回可读结果。"
     except Exception as exc:
         return f"调用模型失败：{exc}"
+
+
+def _looks_like_offline_result(text: str) -> bool:
+    if not text:
+        return True
+    lowered = text.lower()
+    flags = [
+        "无法联网",
+        "未获得可用的在线检索结果",
+        "不能联网",
+        "no web access",
+        "cannot access the internet",
+        "无法访问网络",
+        "无法检索",
+    ]
+    return any(flag in lowered for flag in flags)
+
+
+def _openalex_fallback_search(query: str, limit: int = 12) -> str:
+    try:
+        q = urllib.parse.quote(query[:300].strip())
+        url = f"https://api.openalex.org/works?search={q}&per-page={limit}&sort=relevance_score:desc"
+        request = urllib.request.Request(url=url, headers={"User-Agent": "sar-literature-demo/0.1"})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        results = payload.get("results", []) if isinstance(payload, dict) else []
+        if not results:
+            return ""
+
+        lines = [
+            "| 题目 | 作者 | 年份 | Venue | DOI/链接 | 摘要 |",
+            "|---|---|---:|---|---|---|",
+        ]
+        for item in results[:limit]:
+            title = _safe_text(item.get("display_name"))
+            year = _safe_text(item.get("publication_year"))
+            authors = ", ".join(
+                _safe_text(author.get("author", {}).get("display_name"))
+                for author in item.get("authorships", [])[:4]
+            )
+            venue = _safe_text(item.get("primary_location", {}).get("source", {}).get("display_name"))
+            doi = _safe_text(item.get("doi")) or _safe_text(item.get("id"))
+            abstract = _openalex_abstract(item) or "UNVERIFIED"
+            lines.append(
+                f"| {title or 'UNVERIFIED'} | {authors or 'UNVERIFIED'} | {year or 'UNVERIFIED'} | "
+                f"{venue or 'UNVERIFIED'} | {doi or 'UNVERIFIED'} | {abstract} |"
+            )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+def _openalex_abstract(item: dict) -> str:
+    idx = item.get("abstract_inverted_index")
+    if not isinstance(idx, dict):
+        return ""
+    bucket: dict[int, str] = {}
+    for token, positions in idx.items():
+        if not isinstance(positions, list):
+            continue
+        for pos in positions:
+            if isinstance(pos, int):
+                bucket[pos] = token
+    if not bucket:
+        return ""
+    words = [bucket[i] for i in sorted(bucket.keys())]
+    text = " ".join(words).strip()
+    return _safe_text(text[:360])
+
+
+def _safe_text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).replace("\n", " ").replace("|", "/").strip()

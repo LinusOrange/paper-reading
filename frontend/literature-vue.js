@@ -59,7 +59,7 @@ createApp({
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'}`;
+        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'} · 外部检索回退：${result.used_external_fallback ? '是(OpenAlex)' : '否'}`;
         this.optimizedPrompt = result.optimized_prompt || '未生成。';
         this.searchResult = result.search_result || '未返回内容。';
       } catch (error) {
