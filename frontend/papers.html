@@ -57,7 +57,11 @@
 
         <section class="panel split-layout-wide">
           <div>
-            <div class="panel-header"><h3>文献列表</h3></div>
+            <div class="panel-header">
+              <h3>文献列表</h3>
+              <button id="paper-batch-delete-btn" type="button">批量删除选中</button>
+            </div>
+            <p class="muted-text">勾选论文后可一键批量删除；删除会同时清理标签、分析记录、任务及本地 PDF 文件。</p>
             <div id="paper-list" class="list"></div>
           </div>
           <div class="detail-column">

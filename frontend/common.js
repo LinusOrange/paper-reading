@@ -18,6 +18,7 @@ export const endpoints = {
   deleteTag: (tagId) => `/api/papers/paper-tags/${tagId}`,
   updatePaper: (paperId) => `/api/papers/${paperId}`,
   deletePaper: (paperId) => `/api/papers/${paperId}`,
+  batchDeletePapers: '/api/papers',
 };
 
 export async function apiFetch(url, options = {}) {
@@ -78,6 +79,10 @@ export function renderPaperCard(paper) {
     <article class="item paper-card" data-paper-id="${paper.id}">
       <div class="item-head">
         <div>
+          <label style="display:inline-flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <input type="checkbox" class="paper-select-checkbox" data-paper-select="${paper.id}" />
+            <small>选择</small>
+          </label>
           <h4>${paper.title}</h4>
           <small>${paper.year} · ${paper.venue || 'Unknown venue'}</small>
         </div>

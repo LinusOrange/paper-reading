@@ -90,6 +90,10 @@ class PaperCreateRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class PaperBatchDeleteRequest(BaseModel):
+    paper_ids: list[int] = Field(default_factory=list, description="IDs of papers to delete")
+
+
 class TagCreateRequest(BaseModel):
     tag_name: str
     tag_category: str = "topic"

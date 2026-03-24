@@ -9,9 +9,11 @@ const paperCreateResult = document.getElementById('paper-create-result');
 const tagList = document.getElementById('tag-list');
 const tagCreateResult = document.getElementById('tag-create-result');
 const tagFilter = document.getElementById('tag-filter');
+const paperBatchDeleteButton = document.getElementById('paper-batch-delete-btn');
 
 let currentPapers = [];
 let currentTags = [];
+let selectedPaperIds = new Set();
 
 const tagLabelMap = {
   'airborne-sar': '机载SAR',
@@ -75,6 +77,23 @@ function renderPreviewLauncher(paper) {
 async function deletePaper(paperId) {
   if (!window.confirm(`确认删除论文 #${paperId} 吗？`)) return;
   await apiFetch(endpoints.deletePaper(paperId), { method: 'DELETE' });
+  selectedPaperIds.delete(paperId);
+  await loadData();
+}
+
+async function batchDeleteSelectedPapers() {
+  const ids = [...selectedPaperIds];
+  if (!ids.length) {
+    window.alert('请先勾选要删除的论文。');
+    return;
+  }
+  if (!window.confirm(`确认批量删除 ${ids.length} 篇论文吗？`)) return;
+
+  await apiFetch(endpoints.batchDeletePapers, {
+    method: 'DELETE',
+    body: JSON.stringify({ paper_ids: ids }),
+  });
+  selectedPaperIds = new Set();
   await loadData();
 }
 
@@ -141,12 +160,33 @@ function renderTagFilterOptions(tags) {
 function bindPaperListEvents(papers) {
   paperList.querySelectorAll('[data-paper-id]').forEach((element) => {
     element.addEventListener('click', () => {
+      if (element.dataset.noSelect === '1') return;
       const paper = papers.find((item) => item.id === Number(element.dataset.paperId));
       if (paper) {
         paperList.querySelectorAll('.paper-card').forEach((card) => card.classList.remove('selected'));
         element.classList.add('selected');
         showPaperDetail(paper);
       }
+    });
+  });
+
+  paperList.querySelectorAll('[data-paper-select]').forEach((checkbox) => {
+    const paperId = Number(checkbox.dataset.paperSelect);
+    checkbox.checked = selectedPaperIds.has(paperId);
+    checkbox.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const card = checkbox.closest('[data-paper-id]');
+      if (card) card.dataset.noSelect = '1';
+
+      if (checkbox.checked) {
+        selectedPaperIds.add(paperId);
+      } else {
+        selectedPaperIds.delete(paperId);
+      }
+
+      setTimeout(() => {
+        if (card) delete card.dataset.noSelect;
+      }, 0);
     });
   });
 }
@@ -269,6 +309,11 @@ async function loadPage() {
 
 document.getElementById('paper-create-form').addEventListener('submit', createPaper);
 document.getElementById('tag-create-form').addEventListener('submit', createTag);
+paperBatchDeleteButton?.addEventListener('click', () => {
+  batchDeleteSelectedPapers().catch((error) => {
+    window.alert(`批量删除失败：${error.message}`);
+  });
+});
 document.getElementById('paper-filter-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   await loadData();

@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from backend.app.config import settings
@@ -18,6 +18,7 @@ from backend.app.schemas import (
     ImportDOIRequest,
     ImportURLRequest,
     PaperCreateRequest,
+    PaperBatchDeleteRequest,
     PaperDetail,
     PaperStatus,
     PaperSummary,
@@ -110,6 +111,23 @@ def _normalize_direction_hint(value: str | None) -> list[str]:
     if not value:
         return ["airborne-sar"]
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _delete_paper_and_related(db: Session, paper: Paper) -> None:
+    if paper.pdf_object_key:
+        pdf_path = Path(paper.pdf_object_key)
+        if pdf_path.exists():
+            try:
+                pdf_path.unlink()
+            except Exception:
+                pass
+
+    # Explicit hard-delete of related rows to avoid orphan/stale records under different DB backends.
+    db.execute(delete(PaperTag).where(PaperTag.paper_id == paper.id))
+    db.execute(delete(ProcessingTask).where(ProcessingTask.paper_id == paper.id))
+    if paper.analysis:
+        db.delete(paper.analysis)
+    db.delete(paper)
 
 
 @router.post("", response_model=PaperDetail)
@@ -361,12 +379,42 @@ def update_paper(paper_id: int, payload: PaperUpdateRequest, db: Session = Depen
 
 @router.delete("/{paper_id}", response_model=dict)
 def delete_paper(paper_id: int, db: Session = Depends(get_db)) -> dict:
-    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    paper = db.scalar(select(Paper).options(selectinload(Paper.analysis)).where(Paper.id == paper_id))
     if not paper:
         raise HTTPException(status_code=404, detail="paper not found")
-    db.delete(paper)
+    _delete_paper_and_related(db, paper)
     db.commit()
     return {"message": "paper deleted", "paper_id": paper_id}
+
+
+@router.delete("", response_model=dict)
+def batch_delete_papers(
+    payload: PaperBatchDeleteRequest = Body(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    unique_ids = sorted({paper_id for paper_id in payload.paper_ids if isinstance(paper_id, int)})
+    if not unique_ids:
+        raise HTTPException(status_code=400, detail="paper_ids is required")
+
+    papers = db.scalars(
+        select(Paper)
+        .options(selectinload(Paper.analysis))
+        .where(Paper.id.in_(unique_ids))
+    ).all()
+    found_ids = {paper.id for paper in papers}
+    missing_ids = [paper_id for paper_id in unique_ids if paper_id not in found_ids]
+
+    for paper in papers:
+        _delete_paper_and_related(db, paper)
+    db.commit()
+
+    return {
+        "message": "batch delete completed",
+        "requested_ids": unique_ids,
+        "deleted_ids": sorted(found_ids),
+        "missing_ids": missing_ids,
+        "deleted_count": len(found_ids),
+    }
 
 
 @router.get("/{paper_id}/similar", response_model=list[dict])
