@@ -91,9 +91,9 @@ export function renderPaperCard(paper) {
     <article class="item paper-card" data-paper-id="${paper.id}">
       <div class="item-head">
         <div>
-          <label style="display:inline-flex;align-items:center;gap:6px;margin-bottom:4px;">
-            <input type="checkbox" class="paper-select-checkbox" data-paper-select="${paper.id}" />
-            <small>选择</small>
+          <label class="paper-select-control" title="勾选用于批量删除">
+            <input type="checkbox" class="paper-select-checkbox" data-paper-select="${paper.id}" aria-label="选择论文 ${paper.id}" />
+            <span>已选</span>
           </label>
           <h4>${paper.title}</h4>
           <small>${paper.year} · ${paper.venue || 'Unknown venue'}</small>
