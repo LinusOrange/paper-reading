@@ -133,3 +133,37 @@ docker compose logs backend
 ```
 
 2. 服务器 `3000` 端口是否对外放通；如果 VSCode 端口转发能访问、但 `服务器IP:3000` 不能访问，通常是服务器防火墙或安全组没有放行 `3000` 端口。
+
+
+## PDF 上传报 `ERR_CONNECTION_RESET` 的排查
+
+如果浏览器 Network 中看到：
+
+- `POST /api/papers/import/pdf net::ERR_CONNECTION_RESET`
+- 前端显示 `PDF 上传失败 / Failed to fetch`
+
+优先检查：
+
+1. `frontend` 与 `backend` 容器是否都在运行：
+
+```bash
+docker compose ps
+```
+
+2. 后端是否在上传时抛错或重启：
+
+```bash
+docker compose logs -f backend
+```
+
+3. 前端 Nginx 反向代理是否正常（包括上传体积限制）：
+
+```bash
+docker compose logs -f frontend
+```
+
+本仓库已把 Nginx 的 `client_max_body_size` 调整为 `100m`，并放宽了 `/api/` 代理超时。修改后请重新构建并启动：
+
+```bash
+docker compose up --build -d
+```

@@ -173,7 +173,14 @@ def import_by_pdf(
     with destination.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    parsed_metadata = extract_pdf_metadata(str(destination), file.filename or object_name)
+    try:
+        parsed_metadata = extract_pdf_metadata(str(destination), file.filename or object_name)
+    except Exception:
+        parsed_metadata = {
+            "title": Path(file.filename or object_name).stem or "Untitled PDF",
+            "year": None,
+            "venue": None,
+        }
 
     paper = Paper(
         title=parsed_metadata["title"],
