@@ -42,6 +42,10 @@
                 <input v-model="form.use_web_search" name="use_web_search" type="checkbox" />
                 启用联网检索（Web Search）
               </label>
+              <label class="inline-checkbox">
+                <input v-model="form.store_to_library" name="store_to_library" type="checkbox" />
+                检索后自动写入论文库（仅元数据与摘要简述）
+              </label>
               <button type="submit" :disabled="loading">{{ buttonText }}</button>
             </form>
           </div>

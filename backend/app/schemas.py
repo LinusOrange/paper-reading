@@ -143,6 +143,8 @@ class LiteratureWorkflowRequest(BaseModel):
     user_requirement: str = Field(..., description="User's literature search requirement in natural language")
     prompt_template: str | None = Field(default=None, description="Optional custom base prompt template")
     use_web_search: bool = Field(default=True)
+    compact_output: bool = Field(default=True, description="Prefer compact machine-ingestable output")
+    store_to_library: bool = Field(default=False, description="Store parsed papers into paper library")
 
 
 class TaskInfo(BaseModel):

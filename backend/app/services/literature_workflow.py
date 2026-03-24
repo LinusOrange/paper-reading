@@ -24,8 +24,32 @@ DEFAULT_PROMPT_TEMPLATE = """
 5) 输出中文说明，论文元信息保持原文。
 """.strip()
 
+COMPACT_OUTPUT_SCHEMA = """
+{
+  "papers": [
+    {
+      "title": "string",
+      "year": 2024,
+      "venue": "string|null",
+      "doi": "string|null",
+      "source_url": "string|null",
+      "abstract_brief": "string|null",
+      "keywords": ["string"],
+      "tags": ["string"],
+      "relevance": "string",
+      "verification_status": "VERIFIED|PARTIAL|UNVERIFIED"
+    }
+  ]
+}
+""".strip()
 
-def run_literature_workflow(user_requirement: str, prompt_template: str | None = None, use_web_search: bool = True) -> dict:
+
+def run_literature_workflow(
+    user_requirement: str,
+    prompt_template: str | None = None,
+    use_web_search: bool = True,
+    compact_output: bool = True,
+) -> dict:
     if not settings.openai_api_key or not settings.openai_enabled:
         return {
             "optimized_prompt": "",
@@ -42,19 +66,19 @@ def run_literature_workflow(user_requirement: str, prompt_template: str | None =
         optimized_prompt = template.replace("{USER_REQUIREMENT}", user_requirement.strip())
 
     used_fallback = False
-    search_result = _search_with_prompt(client, optimized_prompt, use_web_search)
+    search_result = _search_with_prompt(client, optimized_prompt, use_web_search, compact_output=compact_output)
     if _looks_like_offline_result(search_result):
-        fallback_result = _openalex_fallback_search(user_requirement or optimized_prompt)
+        fallback_result = _openalex_fallback_search(user_requirement or optimized_prompt, compact_output=compact_output)
         if fallback_result:
             used_fallback = True
-            search_result = (
-                "模型端 web_search 未返回可用联网结果，已自动回退到 OpenAlex 在线检索。\n\n"
-                f"{fallback_result}"
-            )
+            search_result = fallback_result
+
+    parsed_papers = _parse_papers_from_result(search_result)
 
     return {
         "optimized_prompt": optimized_prompt,
         "search_result": search_result,
+        "papers": parsed_papers,
         "model": settings.openai_model,
         "used_web_search": bool(use_web_search),
         "used_external_fallback": used_fallback,
@@ -92,7 +116,7 @@ def _optimize_prompt(client, user_requirement: str, template: str) -> str:
         return ""
 
 
-def _search_with_prompt(client, optimized_prompt: str, use_web_search: bool) -> str:
+def _search_with_prompt(client, optimized_prompt: str, use_web_search: bool, compact_output: bool = True) -> str:
     try:
         kwargs = {
             "model": settings.openai_model,
@@ -103,6 +127,11 @@ def _search_with_prompt(client, optimized_prompt: str, use_web_search: bool) -> 
                         "你是SAR文献检索与综述助手。请严格按用户提示词执行，并保留核验标记。"
                         "当启用web_search时，应尽量给出论文标题、作者、年份、DOI/链接、摘要要点与来源。"
                         "对于无法确认的摘要或元数据，标注UNVERIFIED。"
+                        + (
+                            f"仅输出有效JSON，不要输出额外解释。JSON结构必须为：{COMPACT_OUTPUT_SCHEMA}"
+                            if compact_output
+                            else ""
+                        )
                     ),
                 },
                 {"role": "user", "content": optimized_prompt},
@@ -135,7 +164,7 @@ def _looks_like_offline_result(text: str) -> bool:
     return any(flag in lowered for flag in flags)
 
 
-def _openalex_fallback_search(query: str, limit: int = 12) -> str:
+def _openalex_fallback_search(query: str, limit: int = 12, compact_output: bool = True) -> str:
     try:
         q = urllib.parse.quote(query[:300].strip())
         url = f"https://api.openalex.org/works?search={q}&per-page={limit}&sort=relevance_score:desc"
@@ -147,10 +176,7 @@ def _openalex_fallback_search(query: str, limit: int = 12) -> str:
         if not results:
             return ""
 
-        lines = [
-            "| 题目 | 作者 | 年份 | Venue | DOI/链接 | 摘要 |",
-            "|---|---|---:|---|---|---|",
-        ]
+        papers: list[dict] = []
         for item in results[:limit]:
             title = _safe_text(item.get("display_name"))
             year = _safe_text(item.get("publication_year"))
@@ -161,9 +187,32 @@ def _openalex_fallback_search(query: str, limit: int = 12) -> str:
             venue = _safe_text(item.get("primary_location", {}).get("source", {}).get("display_name"))
             doi = _safe_text(item.get("doi")) or _safe_text(item.get("id"))
             abstract = _openalex_abstract(item) or "UNVERIFIED"
+            papers.append(
+                {
+                    "title": title or "UNVERIFIED",
+                    "year": int(year) if year.isdigit() else None,
+                    "venue": venue or None,
+                    "doi": doi if doi.startswith("10.") else None,
+                    "source_url": doi or None,
+                    "abstract_brief": abstract if abstract != "UNVERIFIED" else None,
+                    "keywords": [],
+                    "tags": ["airborne-sar", "literature-candidate"],
+                    "relevance": "来自 OpenAlex 在线检索回退结果，需二次人工核验。",
+                    "verification_status": "PARTIAL",
+                    "authors": authors or "UNVERIFIED",
+                }
+            )
+
+        if compact_output:
+            return json.dumps({"papers": papers}, ensure_ascii=False)
+
+        lines = ["| 题目 | 作者 | 年份 | Venue | DOI/链接 | 摘要 |", "|---|---|---:|---|---|---|"]
+        for paper in papers:
             lines.append(
-                f"| {title or 'UNVERIFIED'} | {authors or 'UNVERIFIED'} | {year or 'UNVERIFIED'} | "
-                f"{venue or 'UNVERIFIED'} | {doi or 'UNVERIFIED'} | {abstract} |"
+                f"| {_safe_text(paper.get('title'))} | {_safe_text(paper.get('authors'))} | "
+                f"{_safe_text(paper.get('year')) or 'UNVERIFIED'} | {_safe_text(paper.get('venue')) or 'UNVERIFIED'} | "
+                f"{_safe_text(paper.get('doi') or paper.get('source_url')) or 'UNVERIFIED'} | "
+                f"{_safe_text(paper.get('abstract_brief')) or 'UNVERIFIED'} |"
             )
         return "\n".join(lines)
     except Exception:
@@ -192,3 +241,14 @@ def _safe_text(value: object) -> str:
     if value is None:
         return ""
     return str(value).replace("\n", " ").replace("|", "/").strip()
+
+
+def _parse_papers_from_result(raw: str) -> list[dict]:
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+        papers = parsed.get("papers", []) if isinstance(parsed, dict) else []
+        return papers if isinstance(papers, list) else []
+    except Exception:
+        return []

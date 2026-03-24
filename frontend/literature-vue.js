@@ -19,6 +19,7 @@ createApp({
         user_requirement: '机载SAR成像领域的论文系统整理与综述构建，重点关注NCS/CSA及复杂几何场景下的成像算法。',
         prompt_template: DEFAULT_TEMPLATE,
         use_web_search: true,
+        store_to_library: true,
       },
       loading: false,
       statusText: '提交后这里会显示执行状态。',
@@ -52,6 +53,8 @@ createApp({
         user_requirement: this.form.user_requirement.trim(),
         prompt_template: this.form.prompt_template.trim() || null,
         use_web_search: this.form.use_web_search,
+        compact_output: true,
+        store_to_library: this.form.store_to_library,
       };
 
       try {
@@ -59,9 +62,10 @@ createApp({
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'} · 外部检索回退：${result.used_external_fallback ? '是(OpenAlex)' : '否'}`;
+        const stored = result.stored?.created_count ?? 0;
+        this.statusText = `执行完成 · 模型：${result.model} · Web Search：${result.used_web_search ? '启用' : '关闭'} · 外部检索回退：${result.used_external_fallback ? '是(OpenAlex)' : '否'} · 入库新增：${stored}`;
         this.optimizedPrompt = result.optimized_prompt || '未生成。';
-        this.searchResult = result.search_result || '未返回内容。';
+        this.searchResult = this.prettyResult(result.search_result);
       } catch (error) {
         this.statusText = `执行失败：${error.message}`;
         this.statusError = true;
@@ -77,6 +81,14 @@ createApp({
       } catch (error) {
         this.healthText = `服务不可用：${error.message}`;
         healthEl.textContent = this.healthText;
+      }
+    },
+    prettyResult(raw) {
+      if (!raw) return '未返回内容。';
+      try {
+        return JSON.stringify(JSON.parse(raw), null, 2);
+      } catch {
+        return raw;
       }
     },
   },
