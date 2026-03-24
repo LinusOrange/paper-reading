@@ -185,3 +185,14 @@ docker compose up --build -d
 - `paper_tags`
 
 你可以通过 `GET /api/tasks` 观察任务是否从 `queued -> running -> completed/failed`。
+
+
+## PDF 预览连接失败的排查
+
+如果访问 `http://<host>:3000/api/papers/{id}/pdf` 出现“无法连接/被重置”：
+
+1. 先确认论文对应的 PDF 文件确实存在于 `UPLOAD_DIR`；
+2. 执行 `docker compose logs -f backend` 检查 `/api/papers/{id}/pdf` 是否返回 `404 pdf not found`；
+3. 执行 `docker compose logs -f frontend` 检查 Nginx 是否有 upstream 连接错误。
+
+本仓库已将 PDF 响应头调整为 `inline`，并把论文库页面的预览改成“手动点击开始预览”，避免进入页面时自动触发下载。

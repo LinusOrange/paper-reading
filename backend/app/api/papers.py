@@ -239,7 +239,7 @@ def preview_pdf(paper_id: int, db: Session = Depends(get_db)) -> FileResponse:
     if not pdf_path:
         raise HTTPException(status_code=404, detail="pdf not found")
 
-    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_path.name)
+    return FileResponse(pdf_path, media_type="application/pdf", content_disposition_type="inline")
 
 
 @router.patch("/{paper_id}", response_model=PaperDetail)

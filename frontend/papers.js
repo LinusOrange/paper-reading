@@ -13,14 +13,7 @@ function renderSummaryList(items, fallbackText = '暂无') {
   return items.map((item) => `<li>${item}</li>`).join('');
 }
 
-function renderPreview(paper) {
-  if (!paper.pdf_preview_url) {
-    pdfPreview.innerHTML = '';
-    pdfPreviewEmpty.hidden = false;
-    pdfPreviewEmpty.textContent = '当前论文还没有可预览的 PDF。你可以先在“文献导入”页面上传 PDF。';
-    return;
-  }
-
+function mountPreviewFrame(paper) {
   pdfPreviewEmpty.hidden = true;
   pdfPreview.innerHTML = `
     <div class="pdf-preview-toolbar">
@@ -29,6 +22,30 @@ function renderPreview(paper) {
     </div>
     <iframe src="${paper.pdf_preview_url}#view=FitH" title="${paper.title} PDF 预览"></iframe>
   `;
+}
+
+function renderPreviewLauncher(paper) {
+  if (!paper.pdf_preview_url) {
+    pdfPreview.innerHTML = '';
+    pdfPreviewEmpty.hidden = false;
+    pdfPreviewEmpty.textContent = '当前论文还没有可预览的 PDF。你可以先在“文献导入”页面上传 PDF。';
+    return;
+  }
+
+  pdfPreview.innerHTML = '';
+  pdfPreviewEmpty.hidden = false;
+  pdfPreviewEmpty.innerHTML = `
+    <div>
+      <p>该论文支持 PDF 预览。</p>
+      <button id="preview-start-button" type="button">开始预览</button>
+      <p class="muted-text" style="margin-top:10px;">为避免进入论文库时自动触发下载，预览改为手动触发。</p>
+    </div>
+  `;
+
+  const startButton = document.getElementById('preview-start-button');
+  startButton?.addEventListener('click', () => {
+    mountPreviewFrame(paper);
+  });
 }
 
 function showPaperDetail(paper) {
@@ -45,7 +62,7 @@ function showPaperDetail(paper) {
         <div class="meta-card"><span>状态</span><strong>${paper.status}</strong></div>
         <div class="meta-card"><span>DOI</span><strong>${paper.doi || 'N/A'}</strong></div>
         <div class="meta-card"><span>来源链接</span><strong>${paper.source_url || '未提供'}</strong></div>
-        <div class="meta-card"><span>PDF</span><strong>${paper.pdf_preview_url ? '可预览' : '暂无'}</strong></div>
+        <div class="meta-card"><span>PDF</span><strong>${paper.pdf_preview_url ? '可预览（手动打开）' : '暂无'}</strong></div>
       </div>
       <div>
         <h4>结构化摘要</h4>
@@ -63,7 +80,7 @@ function showPaperDetail(paper) {
       </div>
     </div>
   `;
-  renderPreview(paper);
+  renderPreviewLauncher(paper);
 }
 
 async function loadPage() {
