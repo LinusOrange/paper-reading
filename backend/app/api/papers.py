@@ -267,6 +267,56 @@ def list_papers(tag: str | None = Query(default=None), db: Session = Depends(get
     return [_paper_to_schema(paper) for paper in dedup.values()]
 
 
+@router.get("/paper-tags", response_model=list[TagInfo])
+def list_tags(db: Session = Depends(get_db)) -> list[TagInfo]:
+    tags = db.scalars(select(PaperTag).order_by(PaperTag.created_at.desc())).all()
+    return [_tag_to_schema(tag) for tag in tags]
+
+
+@router.post("/paper-tags", response_model=TagInfo)
+def create_tag(payload: TagCreateRequest, paper_id: int = Query(...), db: Session = Depends(get_db)) -> TagInfo:
+    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+
+    tag = PaperTag(
+        paper_id=paper_id,
+        tag_name=payload.tag_name.strip(),
+        tag_category=payload.tag_category.strip() or "topic",
+        source="manual",
+    )
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+    return _tag_to_schema(tag)
+
+
+@router.patch("/paper-tags/{tag_id}", response_model=TagInfo)
+def update_tag(tag_id: int, payload: TagUpdateRequest, db: Session = Depends(get_db)) -> TagInfo:
+    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
+    if not tag:
+        raise HTTPException(status_code=404, detail="tag not found")
+
+    if payload.tag_name is not None:
+        tag.tag_name = payload.tag_name.strip()
+    if payload.tag_category is not None:
+        tag.tag_category = payload.tag_category.strip() or "topic"
+
+    db.commit()
+    db.refresh(tag)
+    return _tag_to_schema(tag)
+
+
+@router.delete("/paper-tags/{tag_id}", response_model=dict)
+def delete_tag(tag_id: int, db: Session = Depends(get_db)) -> dict:
+    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
+    if not tag:
+        raise HTTPException(status_code=404, detail="tag not found")
+    db.delete(tag)
+    db.commit()
+    return {"message": "tag deleted", "tag_id": tag_id}
+
+
 @router.get("/{paper_id}", response_model=PaperDetail)
 def get_paper(paper_id: int, db: Session = Depends(get_db)) -> PaperDetail:
     paper = db.scalar(
@@ -331,53 +381,3 @@ def similar_papers(paper_id: int, db: Session = Depends(get_db)) -> list[dict]:
         }
         for paper in other_papers
     ]
-
-
-@router.get("/paper-tags", response_model=list[TagInfo])
-def list_tags(db: Session = Depends(get_db)) -> list[TagInfo]:
-    tags = db.scalars(select(PaperTag).order_by(PaperTag.created_at.desc())).all()
-    return [_tag_to_schema(tag) for tag in tags]
-
-
-@router.post("/paper-tags", response_model=TagInfo)
-def create_tag(payload: TagCreateRequest, paper_id: int = Query(...), db: Session = Depends(get_db)) -> TagInfo:
-    paper = db.scalar(select(Paper).where(Paper.id == paper_id))
-    if not paper:
-        raise HTTPException(status_code=404, detail="paper not found")
-
-    tag = PaperTag(
-        paper_id=paper_id,
-        tag_name=payload.tag_name.strip(),
-        tag_category=payload.tag_category.strip() or "topic",
-        source="manual",
-    )
-    db.add(tag)
-    db.commit()
-    db.refresh(tag)
-    return _tag_to_schema(tag)
-
-
-@router.patch("/paper-tags/{tag_id}", response_model=TagInfo)
-def update_tag(tag_id: int, payload: TagUpdateRequest, db: Session = Depends(get_db)) -> TagInfo:
-    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
-    if not tag:
-        raise HTTPException(status_code=404, detail="tag not found")
-
-    if payload.tag_name is not None:
-        tag.tag_name = payload.tag_name.strip()
-    if payload.tag_category is not None:
-        tag.tag_category = payload.tag_category.strip() or "topic"
-
-    db.commit()
-    db.refresh(tag)
-    return _tag_to_schema(tag)
-
-
-@router.delete("/paper-tags/{tag_id}", response_model=dict)
-def delete_tag(tag_id: int, db: Session = Depends(get_db)) -> dict:
-    tag = db.scalar(select(PaperTag).where(PaperTag.id == tag_id))
-    if not tag:
-        raise HTTPException(status_code=404, detail="tag not found")
-    db.delete(tag)
-    db.commit()
-    return {"message": "tag deleted", "tag_id": tag_id}
